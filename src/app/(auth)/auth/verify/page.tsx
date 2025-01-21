@@ -37,7 +37,7 @@ const VerifyPageContent = () => {
 
         if (response.ok) {
           // Redirect to verification success page instead of handling success here
-          router.push("/verify-success")
+          router.push("/auth/verify-success")
         } else {
           setVerificationStatus('error')
           setError(data.error || "Verification failed")
