@@ -1,5 +1,3 @@
-"use client"
-
 import React from 'react';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
@@ -7,48 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Github, Twitter, Code2, Share2, Send } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
   
-  const handleShare = async () => {
-    const shareData = {
-      title: 'DevHub',
-      text: 'Check out DevHub - Your go-to platform for finding and sharing development tools, libraries, and resources.',
-      url: window.location.href,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        toast({
-          title: "Shared successfully!",
-          description: "Thank you for sharing DevHub!",
-          duration: 2000,
-        });
-      } else {
-        // Fallback for browsers that don't support Web Share API
-        await navigator.clipboard.writeText(window.location.href);
-        toast({
-          title: "Link copied!",
-          description: "The link has been copied to your clipboard.",
-          duration: 2000,
-        });
-      }
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        toast({
-          title: "Sharing failed",
-          description: "Please try again later.",
-          variant: "destructive",
-          duration: 3000,
-        });
-      }
-    }
-  };
-  
-  // Rest of your Footer component remains the same...
   return (
     <footer className="mt-auto">
       <div className="container px-4 pb-0">
@@ -177,7 +137,6 @@ export function Footer() {
                   variant="ghost" 
                   size="sm" 
                   className="text-xs rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
-                  onClick={handleShare}
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Share DevHub
