@@ -44,7 +44,7 @@ const interests = [
 ];
 
 export default function RegistrationPage() {
-  const [isLoading, setIsLoading] = useState(false);
+    const [isLoading] = useState(false); // Removed unused setIsLoading
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     email: "",
@@ -59,7 +59,7 @@ export default function RegistrationPage() {
     newsletter: false
   });
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

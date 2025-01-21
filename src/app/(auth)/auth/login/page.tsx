@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
@@ -7,7 +7,13 @@ import { Loader2, Coffee, KeyRound, Mail, Chrome } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 
@@ -74,7 +80,8 @@ export default function LoginPage() {
 
     const form = event.target as HTMLFormElement;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
-    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+    const password = (form.elements.namedItem("password") as HTMLInputElement)
+      .value;
 
     try {
       const result = await signIn("credentials", {
@@ -179,7 +186,10 @@ export default function LoginPage() {
               </Button>
 
               <div className="text-sm text-center text-muted-foreground">
-                <a href="#" className="hover:text-primary underline underline-offset-4">
+                <a
+                  href="#"
+                  className="hover:text-primary underline underline-offset-4"
+                >
                   Forgot your password?
                 </a>
               </div>
@@ -194,7 +204,9 @@ export default function LoginPage() {
         <div className="relative w-full flex flex-col items-center justify-center p-8">
           <div className="w-full max-w-md space-y-8">
             <div className="space-y-2 text-center">
-              <h2 className="text-3xl font-bold tracking-tight">Developer's Corner</h2>
+              <h2 className="text-3xl font-bold tracking-tight">
+                Developer&apos;s Corner
+              </h2>
               <p className="text-primary-foreground/60">
                 A new joke every 5 seconds, just like your build times...
               </p>
@@ -202,7 +214,7 @@ export default function LoginPage() {
             <Alert className="border-primary-foreground/20 bg-primary-foreground/10">
               <div className="space-y-3">
                 <AlertDescription className="text-lg font-medium text-primary-foreground">
-                  "{currentJoke.joke}"
+                  &quot;{currentJoke.joke}&quot;
                 </AlertDescription>
                 <p className="text-sm text-primary-foreground/60 text-right italic">
                   - {currentJoke.author}
