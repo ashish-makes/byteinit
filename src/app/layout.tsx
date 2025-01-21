@@ -39,12 +39,12 @@
 // }
 
 
-import { Inter } from "next/font/google"
+import { Bricolage_Grotesque, Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import "@/globals.css"
 import { SessionProvider } from "next-auth/react"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Bricolage_Grotesque({ subsets: ["latin"] })
 
 export const metadata = {
   title: "Byteinit",
