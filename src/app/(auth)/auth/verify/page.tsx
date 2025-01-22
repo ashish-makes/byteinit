@@ -9,9 +9,7 @@ import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
 // Add this constant for base URL handling
-const BASE_URL = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:3000' 
-  : 'https://byteinit.netlify.app'
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 const VerifyPageContent = () => {
   const router = useRouter()
