@@ -95,14 +95,14 @@ export default function LoginPage() {
     if (!validateForm()) return
     
     setIsLoading(true)
-
+  
     try {
       const result = await signIn("credentials", {
         emailOrUsername: formData.emailOrUsername.trim(),
         password: formData.password,
         redirect: false,
       })
-
+  
       if (result?.error) {
         console.error("Login error:", result.error)
         toast.error(
@@ -110,18 +110,19 @@ export default function LoginPage() {
             ? "Invalid email/username or password"
             : "An error occurred during login"
         )
+        setIsLoading(false)
         return
       }
-
+  
       if (result?.ok) {
         toast.success("Login successful!")
-        await new Promise(resolve => setTimeout(resolve, 500))
-        router.replace("/dashboard")
+        // Wait for session to be fully initialized
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        window.location.href = "/dashboard"
       }
     } catch (error) {
       console.error("Unexpected error during login:", error)
       toast.error("An unexpected error occurred")
-    } finally {
       setIsLoading(false)
     }
   }
