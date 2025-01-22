@@ -4,6 +4,7 @@ import { JWT } from "next-auth/jwt";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/prisma";
 import Google from "next-auth/providers/google";
+import Discord from "next-auth/providers/discord";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { User } from "@prisma/client";
@@ -19,6 +20,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_AUTH_ID,
       clientSecret: process.env.GOOGLE_AUTH_SECRET,
+    }),
+    Discord({
+      clientId: process.env.DISCORD_AUTH_ID,
+      clientSecret: process.env.DISCORD_AUTH_SECRET,
     }),
     Credentials({
       name: "credentials",
@@ -44,7 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("User not found");
         }
 
-        if (typeof credentials?.password !== 'string') {
+        if (typeof credentials?.password !== "string") {
           throw new Error("Invalid password format");
         }
 
@@ -62,7 +67,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           email: user.email,
           image: user.image,
-          role: user.role || undefined
+          role: user.role || undefined,
         };
       },
     }),
@@ -71,7 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         // Ensure the token.id is always a string, even if user.id is undefined
-        token.id = user.id || '';  // Default to an empty string if user.id is undefined
+        token.id = user.id || ""; // Default to an empty string if user.id is undefined
         token.role = user.role;
       }
       return token;
@@ -83,6 +88,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
-  }
-  
+  },
 });
