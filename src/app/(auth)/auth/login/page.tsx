@@ -36,98 +36,109 @@ const devJokes = [
 ]
 
 export default function LoginPage() {
-  const { status } = useSession()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [currentJoke, setCurrentJoke] = useState(devJokes[0])
-  const [formData, setFormData] = useState({
-    emailOrUsername: "",
-    password: "",
-  })
-
-  // Redirect to dashboard if user is authenticated
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.push("/dashboard")
-    }
-  }, [status, router])
-
-  // Rotate jokes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentJoke((prevJoke) => {
-        const currentIndex = devJokes.indexOf(prevJoke)
-        const nextIndex = (currentIndex + 1) % devJokes.length
-        return devJokes[nextIndex]
-      })
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const validateForm = (): boolean => {
-    if (!formData.emailOrUsername || !formData.password) {
-      toast.error("All fields are required")
-      return false
-    }
-
-    return true
-  }
-
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const result = await signIn("credentials", {
-        emailOrUsername: formData.emailOrUsername,
-        password: formData.password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        if (result.error === "CredentialsSignin") {
-          toast.error("Invalid email/username or password. Please try again.")
-        } else {
-          toast.error("An error occurred during login. Please try again.")
-        }
-        return
+    const { data: session, status } = useSession()
+    const router = useRouter()
+    const [isLoading, setIsLoading] = useState(false)
+    const [currentJoke, setCurrentJoke] = useState(devJokes[0])
+    const [formData, setFormData] = useState({
+      emailOrUsername: "",
+      password: "",
+    })
+  
+    // Enhanced redirect logic
+    useEffect(() => {
+      if (status === "authenticated" && session) {
+        console.log("Authentication successful, redirecting to dashboard...")
+        router.replace("/dashboard")
       }
-
-      toast.success("Logged in successfully!")
-      router.push("/dashboard")
-    } catch (error) {
-      toast.error("An unexpected error occurred. Please try again later.")
-    } finally {
-      setIsLoading(false)
+    }, [status, session, router])
+  
+    // Rotate jokes
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setCurrentJoke((prevJoke) => {
+          const currentIndex = devJokes.indexOf(prevJoke)
+          const nextIndex = (currentIndex + 1) % devJokes.length
+          return devJokes[nextIndex]
+        })
+      }, 5000)
+  
+      return () => clearInterval(interval)
+    }, [])
+  
+    if (status === "loading") {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )
     }
-  }
-
-  const handleGoogleSignIn = async () => {
-    try {
-      await signIn("google", { callbackUrl: "/dashboard" })
-    } catch (error) {
-      console.error("Error signing in with Google:", error)
-      toast.error("Failed to sign in with Google. Please try again.")
+  
+    const handleInputChange = (field: string, value: string) => {
+      setFormData((prev) => ({ ...prev, [field]: value }))
     }
-  }
+  
+    const validateForm = (): boolean => {
+      if (!formData.emailOrUsername.trim() || !formData.password.trim()) {
+        toast.error("All fields are required")
+        return false
+      }
+      return true
+    }
+  
+    async function onSubmit(event: React.FormEvent) {
+      event.preventDefault()
+      
+      if (!validateForm()) return
+      
+      setIsLoading(true)
+  
+      try {
+        const result = await signIn("credentials", {
+          emailOrUsername: formData.emailOrUsername.trim(),
+          password: formData.password,
+          redirect: false,
+        })
+  
+        console.log("Sign in result:", result)
+  
+        if (result?.error) {
+          console.error("Login error:", result.error)
+          toast.error(
+            result.error === "CredentialsSignin"
+              ? "Invalid email/username or password"
+              : "An error occurred during login"
+          )
+          return
+        }
+  
+        if (result?.ok) {
+          toast.success("Login successful!")
+          // Wait for session to be updated
+          await new Promise(resolve => setTimeout(resolve, 500))
+          router.replace("/dashboard")
+        }
+      } catch (error) {
+        console.error("Unexpected error during login:", error)
+        toast.error("An unexpected error occurred")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  
+    const handleGoogleSignIn = async () => {
+      setIsLoading(true)
+      try {
+        await signIn("google", {
+          callbackUrl: "/dashboard",
+          redirect: true,
+        })
+      } catch (error) {
+        console.error("Google sign-in error:", error)
+        toast.error("Failed to sign in with Google")
+        setIsLoading(false)
+      }
+    }
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row overflow-hidden">

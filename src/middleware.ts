@@ -1,31 +1,58 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+// 2. middleware.ts
+import { NextResponse } from 'next/server'
+import { auth } from '@/auth'
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth; // Check if the user is authenticated
-  const { pathname } = req.nextUrl; // Extract the pathname from the request URL
+  const isLoggedIn = !!req.auth
+  const { pathname } = req.nextUrl
 
-  // Define routes accessible only to logged-out users
-  const loggedOutOnlyRoutes = ['/auth/login', '/auth/register', '/auth/verify', '/auth/verify-email', '/auth/verify-success'];
-
-  // Define routes accessible only to logged-in users
-  const protectedRoutes = ['/dashboard', '/dashboard/resources/new'];
-
-  // Redirect logged-in users trying to access logged-out-only routes
-  if (isLoggedIn && loggedOutOnlyRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+  // Define routes with their access rules
+  const routes = {
+    publicOnly: [
+      '/auth/login',
+      '/auth/register',
+      '/auth/verify',
+      '/auth/verify-email',
+      '/auth/verify-success'
+    ],
+    protected: [
+      '/dashboard',
+      '/dashboard/resources/new'
+    ],
+    public: [
+      '/',
+      '/about',
+      '/contact'
+      // Add other public routes here
+    ]
   }
 
-  // Redirect logged-out users trying to access protected routes
-  if (!isLoggedIn && protectedRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/auth/login', req.url));
+  // Helper function to check if path starts with any of the routes
+  const pathStartsWith = (paths: string[]) => 
+    paths.some(route => pathname.startsWith(route))
+
+  // Check route access
+  if (isLoggedIn) {
+    // Redirect authenticated users away from auth pages
+    if (pathStartsWith(routes.publicOnly)) {
+      console.log("Authenticated user redirected from auth page to dashboard")
+      return NextResponse.redirect(new URL('/dashboard', req.url))
+    }
+  } else {
+    // Redirect unauthenticated users away from protected pages
+    if (pathStartsWith(routes.protected)) {
+      console.log("Unauthenticated user redirected to login")
+      const loginUrl = new URL('/auth/login', req.url)
+      loginUrl.searchParams.set('callbackUrl', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
-  // Allow access if none of the conditions match
-  return NextResponse.next();
-});
+  // Allow access to all other routes
+  return NextResponse.next()
+})
 
-// Middleware configuration: Exclude specific static assets and API routes
+// Keep your existing config
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
-};
+}
