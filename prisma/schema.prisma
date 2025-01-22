@@ -23,6 +23,8 @@ model User {
   sessions      Session[]
   role          UserRole?        @default(USER)
   password      String?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
   // Optional for WebAuthn support
   Authenticator Authenticator[]
  
