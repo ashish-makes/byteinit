@@ -1,9 +1,9 @@
-import React from 'react'
+import ResourceListing from '@/components/ui/ResourcesListing';
 
-const resources = () => {
+export default function ResourcesPage() {
   return (
-    <div>resources</div>
-  )
+    <div className="pt-24">
+      <ResourceListing />
+    </div>
+  );
 }
-
-export default resources

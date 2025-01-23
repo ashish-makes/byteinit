@@ -18,7 +18,6 @@ export default function DashboardLayout({
   const { status } = useSession();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
-  // Handle loading state
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -27,7 +26,6 @@ export default function DashboardLayout({
     );
   }
 
-  // Handle unauthenticated state
   if (status === "unauthenticated") {
     redirect("/auth/login");
   }
@@ -48,15 +46,16 @@ export default function DashboardLayout({
           {/* Sidebar */}
           <Sidebar 
             className={cn(
-              "fixed left-0 top-0 z-40 h-screen w-64 shrink-0 transition-transform duration-200 lg:relative lg:z-0",
+              "fixed left-0 top-0 z-40 w-64 h-screen overflow-y-auto",
+              "transition-transform duration-200",
               isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}
           />
           
           {/* Main Content */}
-          <div className="flex-1 flex flex-col min-h-screen">
+          <div className="flex-1 ml-0 lg:ml-64 flex flex-col min-h-screen">
             <Header onMenuClick={() => setIsSidebarOpen(true)} />
-            <main className="flex-1 overflow-x-hidden p-4 md:p-6">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">
               <div className="mx-auto max-w-7xl">
                 {children}
               </div>

@@ -49,5 +49,18 @@ declare module "next-auth/jwt" {
     lookingForWork?: boolean; // Job-seeking status
     currentRole?: string; // Current job role
     company?: string; // Current company
+    resources?: {
+      id: string;
+      title: string;
+      description: string;
+      url: string;
+      type: string;
+      category: string;
+      tags?: string[];
+    }[];
+    savedResources?: {
+      id: string;
+      resourceId: string;
+    }[];
   }
 }

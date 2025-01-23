@@ -308,7 +308,7 @@ const ViewMode = ({
         disabled={isLoading}
         className="h-8 w-8 rounded-full bg-muted md:hidden"
       >
-        <Pencil className="h-4 w-4" />
+        <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
       </Button>
       {/* Desktop edit button */}
       <Button

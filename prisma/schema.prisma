@@ -12,6 +12,56 @@ enum UserRole {
   ADMIN
   USER
 }
+
+enum ResourceType {
+  LIBRARY
+  TOOL
+  FRAMEWORK
+  TUTORIAL
+  TEMPLATE
+  OTHER
+}
+
+enum ResourceCategory {
+  FRONTEND
+  BACKEND
+  FULLSTACK
+  DEVOPS
+  MOBILE
+  AI_ML
+  DATABASE
+  SECURITY
+  OTHER
+}
+
+model Resource {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  description   String
+  url           String
+  type          ResourceType
+  category      ResourceCategory
+  tags          String[]
+  userId        String         @db.ObjectId
+  user          User           @relation(fields: [userId], references: [id])
+  
+  savedBy       SavedResource[]
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model SavedResource {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String         @db.ObjectId
+  resourceId    String         @db.ObjectId
+  user          User           @relation(fields: [userId], references: [id])
+  resource      Resource       @relation(fields: [resourceId], references: [id])
+  
+  savedAt       DateTime       @default(now())
+
+  @@unique([userId, resourceId])
+}
  
 model User {
   id            String          @id @default(auto()) @map("_id") @db.ObjectId
@@ -38,6 +88,10 @@ model User {
   password      String?
   resetToken        String?
   resetTokenExpiry  DateTime?
+
+  resources     Resource[]
+  savedResources SavedResource[]
+
   // Optional for WebAuthn support
   Authenticator Authenticator[]
  
