@@ -1,6 +1,6 @@
 import React from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
-import { Menu, Plus, Library, User, Settings, BookMarked, BarChart } from 'lucide-react';
+import { Menu, Plus, Library, User, BookMarked, BarChart } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
+import { ThemeToggle } from '../ui/theme-toggle';
 
 const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const { data: session, status } = useSession();
@@ -80,6 +81,12 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
                   <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <Link href="/dashboard/profile">
+                  <DropdownMenuItem className="gap-2">
+                    <User className="h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuItem className="gap-2">
                   <BookMarked className="h-4 w-4" />
                   Saved Resources
@@ -87,10 +94,6 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
                 <DropdownMenuItem className="gap-2">
                   <BarChart className="h-4 w-4" />
                   Analytics
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -107,6 +110,7 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
               Login
             </Button>
           )}
+          <ThemeToggle/>
         </div>
       </div>
     </header>

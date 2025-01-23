@@ -44,6 +44,7 @@ import { Bricolage_Grotesque, Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import "@/globals.css"
 import { SessionProvider } from "next-auth/react"
+import { Toaster } from 'sonner'
 
 const inter = Bricolage_Grotesque({ subsets: ["latin"] })
 
@@ -58,16 +59,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-<SessionProvider>
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
-   </SessionProvider>
-
+    <SessionProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body className={inter.className}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            {children}
+          </ThemeProvider>
+          <Toaster richColors />
+        </body>
+      </html>
+    </SessionProvider>
   )
 }
 
