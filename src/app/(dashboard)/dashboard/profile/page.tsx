@@ -260,25 +260,27 @@ const ViewMode = ({
 
           {/* Role and Company */}
           {(profileData.currentRole || profileData.company) && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Code2 className="h-4 w-4" />
-                <span>{profileData.currentRole || 'Role not specified'}</span>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-muted-foreground">
+              {profileData.currentRole && (
+                <div className="flex items-center gap-1.5">
+                  <Code2 className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{profileData.currentRole}</span>
+                </div>
+              )}
+              {profileData.currentRole && profileData.company && (
+                <span className="hidden sm:inline text-muted-foreground/60">•</span>
+              )}
               {profileData.company && (
-                <>
-                  <span className="text-muted-foreground/60">•</span>
-                  <div className="flex items-center gap-1.5">
-                    <Briefcase className="h-4 w-4" />
-                    <span>{profileData.company}</span>
-                  </div>
-                </>
+                <div className="flex items-center gap-1.5">
+                  <Briefcase className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{profileData.company}</span>
+                </div>
               )}
             </div>
           )}
           
           {/* Experience and Work Status */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
             {profileData.yearsOfExperience && (
               <Badge 
                 variant="secondary" 
