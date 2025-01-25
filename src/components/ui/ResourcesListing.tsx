@@ -1,89 +1,184 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { ResourceCard } from "./ResourceCard"
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select"
-import { toast } from "sonner"
-import { useBookmarks } from "@/hooks/useBookmarks"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Search, X, Layers } from "lucide-react"
-import { AnimatePresence, motion } from "framer-motion"
+import { useState, useEffect } from "react";
+import { ResourceCard } from "./ResourceCard";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, X, Layers } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
+// Resource interface definition
 interface Resource {
-  id: string
-  title: string
-  description: string
-  url: string
-  type: string
-  category: string
-  createdAt?: string
-  author?: {
-    name: string
-    image?: string
-  }
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  type: string;
+  category: string;
+  createdAt?: string;
+  user?: {
+    name: string;
+    image?: string;
+  };
+  tags?: string[];
 }
 
-const resourceTypes = ["ALL", "LIBRARY", "TOOL", "FRAMEWORK", "TUTORIAL", "TEMPLATE", "OTHER"]
+// Predefined resource types and categories
+const resourceTypes = [
+  "ALL",
+  "LIBRARY",
+  "TOOL",
+  "FRAMEWORK",
+  "TUTORIAL",
+  "TEMPLATE",
+  "OTHER",
+];
+
 const resourceCategories = [
-  "ALL", "FRONTEND", "BACKEND", "FULLSTACK", "DEVOPS", 
-  "MOBILE", "AI_ML", "DATABASE", "SECURITY", "OTHER"
-]
+  "ALL",
+  "FRONTEND",
+  "BACKEND",
+  "FULLSTACK",
+  "DEVOPS",
+  "MOBILE",
+  "AI_ML",
+  "DATABASE",
+  "SECURITY",
+  "OTHER",
+];
 
+// Skeleton Component for ResourceCard
+function ResourceCardSkeleton() {
+    return (
+      <div
+        className={cn(
+          "relative w-full h-full flex flex-col overflow-hidden rounded-xl border p-4",
+          "border-gray-950/[.1] bg-white dark:border-gray-50/[.1] dark:bg-neutral-900" // Darker background for dark mode
+        )}
+      >
+        {/* Icon and Title Section */}
+        <div className="flex flex-row items-center gap-3">
+          {/* Icon Skeleton */}
+          <Skeleton className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+  
+          {/* Title and Category Skeleton */}
+          <div className="flex flex-col flex-1 min-w-0">
+            <Skeleton className="h-4 w-3/4 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+            <Skeleton className="h-3 w-1/2 mt-2 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+          </div>
+  
+          {/* Bookmark Button Skeleton */}
+          <Skeleton className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+        </div>
+  
+        {/* Description Skeleton */}
+        <div className="mt-3 space-y-2">
+          <Skeleton className="h-3 w-full bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+          <Skeleton className="h-3 w-2/3 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+        </div>
+  
+        {/* Tags Section Skeleton */}
+        <div className="flex flex-wrap gap-2 mt-3">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <Skeleton
+              key={index}
+              className="h-6 w-16 rounded-full bg-gray-200 dark:bg-gray-800" // Darker shade
+            />
+          ))}
+        </div>
+  
+        {/* Author and Date Section Skeleton */}
+        <div className="mt-4 flex flex-col gap-2">
+          {/* Author Skeleton */}
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 rounded-full bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+            <Skeleton className="h-3 w-24 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+          </div>
+  
+          {/* Date and Link Skeleton */}
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-3 w-20 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+            <Skeleton className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+// Main ResourceListPage Component
 export default function ResourceListPage() {
-  const [resources, setResources] = useState<Resource[]>([])
-  const [filteredResources, setFilteredResources] = useState<Resource[]>([])
-  const [filter, setFilter] = useState({ type: "ALL", category: "ALL" })
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
+  // State management
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
+  const [filter, setFilter] = useState({ type: "ALL", category: "ALL" });
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const { savedResourceIds, toggleBookmark } = useBookmarks()
+  // Bookmark hook
+  const { savedResourceIds, toggleBookmark } = useBookmarks();
 
+  // Fetch resources when filter changes
   useEffect(() => {
-    fetchResources()
-  }, [filter])
+    fetchResources();
+  }, [filter.type, filter.category]);
 
+  // Filter resources based on search and filter criteria
   useEffect(() => {
-    const filtered = resources.filter(
+    // Ensure resources is always an array before filtering
+    const safeResources = Array.isArray(resources) ? resources : [];
+    
+    const filtered = safeResources.filter(
       (resource) =>
         (filter.type === "ALL" || resource.type === filter.type) &&
         (filter.category === "ALL" || resource.category === filter.category) &&
         (resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          resource.description.toLowerCase().includes(searchTerm.toLowerCase())),
-    )
-    setFilteredResources(filtered)
-  }, [resources, filter, searchTerm])
+          resource.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    setFilteredResources(filtered);
+  }, [resources, filter, searchTerm]);
 
+  // Fetch resources from API
   const fetchResources = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const params = new URLSearchParams()
-      if (filter.type !== "ALL") params.append("type", filter.type)
-      if (filter.category !== "ALL") params.append("category", filter.category)
+      const params = new URLSearchParams();
+      if (filter.type !== "ALL") params.append("type", filter.type);
+      if (filter.category !== "ALL") params.append("category", filter.category);
 
-      const response = await fetch(`/api/resources?${params}`)
-      const data = await response.json()
-      setResources(data)
+      const response = await fetch(`/api/resources?${params}`);
+      const data = await response.json();
+      
+      // Ensure data is an array
+      setResources(Array.isArray(data) ? data : []);
     } catch (error) {
-      toast.error("Failed to fetch resources")
+      toast.error("Failed to fetch resources");
+      setResources([]); // Set to empty array on error
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
+  // Handle bookmark toggle
   const handleBookmarkClick = async (resourceId: string) => {
-    await toggleBookmark(resourceId)
-  }
+    await toggleBookmark(resourceId);
+  };
 
+  // Render the component
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-3xl font-bold text-neutral-900 dark:text-white flex items-center gap-3">
           <Layers className="h-8 w-8 text-neutral-600" />
@@ -91,14 +186,17 @@ export default function ResourceListPage() {
         </h1>
         <div className="flex items-center gap-2">
           <div className="text-neutral-500">
-            {filteredResources.length} resource{filteredResources.length !== 1 ? "s" : ""}
+            {filteredResources.length} resource
+            {filteredResources.length !== 1 ? "s" : ""}
           </div>
         </div>
       </div>
 
+      {/* Filters and Search */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select 
-          onValueChange={(value) => setFilter((prev) => ({ ...prev, type: value }))} 
+        {/* Resource Type Filter */}
+        <Select
+          onValueChange={(value) => setFilter((prev) => ({ ...prev, type: value }))}
           value={filter.type}
         >
           <SelectTrigger className="w-full">
@@ -113,8 +211,9 @@ export default function ResourceListPage() {
           </SelectContent>
         </Select>
 
-        <Select 
-          onValueChange={(value) => setFilter((prev) => ({ ...prev, category: value }))} 
+        {/* Resource Category Filter */}
+        <Select
+          onValueChange={(value) => setFilter((prev) => ({ ...prev, category: value }))}
           value={filter.category}
         >
           <SelectTrigger className="w-full">
@@ -131,6 +230,7 @@ export default function ResourceListPage() {
           </SelectContent>
         </Select>
 
+        {/* Search Input */}
         <div className="relative">
           <Input
             type="text"
@@ -153,15 +253,22 @@ export default function ResourceListPage() {
         </div>
       </div>
 
+      {/* Resource List or Skeleton Loading */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-[50vh]">
-          <div className="flex items-center gap-2 text-neutral-500">
-            <Layers className="animate-pulse" />
-            Loading resources...
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <ResourceCardSkeleton />
+            </motion.div>
+          ))}
         </div>
       ) : filteredResources.length === 0 ? (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center py-16 bg-neutral-50 dark:bg-neutral-900 rounded-xl"
@@ -193,5 +300,5 @@ export default function ResourceListPage() {
         </AnimatePresence>
       )}
     </div>
-  )
+  );
 }

@@ -57,7 +57,16 @@ export async function GET(req: NextRequest) {
     const savedResources = await prisma.savedResource.findMany({
       where: { userId: session.user.id },
       include: {
-        resource: true
+        resource: {
+          include: {
+            user: {
+              select: { 
+                name: true,
+                image: true 
+              }
+            }
+          }
+        }
       }
     });
     return NextResponse.json(savedResources);

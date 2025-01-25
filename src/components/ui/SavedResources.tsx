@@ -7,6 +7,7 @@ import { ResourceCard } from "./ResourceCard"
 import { useBookmarks } from "@/hooks/useBookmarks"
 import { Input } from "@/components/ui/input"
 import { AnimatePresence, motion } from "framer-motion"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Resource {
   id: string
@@ -17,10 +18,64 @@ interface Resource {
   category: string
 }
 
+// Skeleton Loading Component
+function ResourceCardSkeleton() {
+  return (
+    <div className="relative w-full h-full flex flex-col overflow-hidden rounded-xl border p-4 border-gray-950/[.1] bg-white dark:border-gray-50/[.1] dark:bg-neutral-900">
+      {/* Icon and Title Section */}
+      <div className="flex flex-row items-center gap-3">
+        {/* Icon Skeleton */}
+        <Skeleton className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
+
+        {/* Title and Category Skeleton */}
+        <div className="flex flex-col flex-1 min-w-0">
+          <Skeleton className="h-4 w-3/4 bg-gray-200 dark:bg-gray-800" />
+          <Skeleton className="h-3 w-1/2 mt-2 bg-gray-200 dark:bg-gray-800" />
+        </div>
+
+        {/* Bookmark Button Skeleton */}
+        <Skeleton className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" />
+      </div>
+
+      {/* Description Skeleton */}
+      <div className="mt-3 space-y-2">
+        <Skeleton className="h-3 w-full bg-gray-200 dark:bg-gray-800" />
+        <Skeleton className="h-3 w-2/3 bg-gray-200 dark:bg-gray-800" />
+      </div>
+
+      {/* Tags Section Skeleton */}
+      <div className="flex flex-wrap gap-2 mt-3">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <Skeleton
+            key={index}
+            className="h-6 w-16 rounded-full bg-gray-200 dark:bg-gray-800"
+          />
+        ))}
+      </div>
+
+      {/* Author and Date Section Skeleton */}
+      <div className="mt-4 flex flex-col gap-2">
+        {/* Author Skeleton */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded-full bg-gray-200 dark:bg-gray-800" />
+          <Skeleton className="h-3 w-24 bg-gray-200 dark:bg-gray-800" />
+        </div>
+
+        {/* Date and Link Skeleton */}
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3 w-20 bg-gray-200 dark:bg-gray-800" />
+          <Skeleton className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function SavedResources() {
   const [savedResources, setSavedResources] = useState<Resource[]>([])
   const [filteredResources, setFilteredResources] = useState<Resource[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [isLoading, setIsLoading] = useState(true) // Loading state
 
   const { savedResourceIds, toggleBookmark } = useBookmarks()
 
@@ -46,6 +101,8 @@ export default function SavedResources() {
       setFilteredResources(resources)
     } catch {
       toast.error("Could not load resources")
+    } finally {
+      setIsLoading(false) // Set loading to false after fetching
     }
   }
 
@@ -79,11 +136,24 @@ export default function SavedResources() {
         </div>
       </div>
 
-      {filteredResources.length === 0 ? (
+      {isLoading ? ( // Show skeleton loading while fetching
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <ResourceCardSkeleton />
+            </motion.div>
+          ))}
+        </div>
+      ) : filteredResources.length === 0 ? ( // Show empty state if no resources
         <div className="text-center py-12 text-neutral-500">
           No resources found
         </div>
-      ) : (
+      ) : ( // Show filtered resources
         <AnimatePresence>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredResources.map((resource, index) => (

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React from 'react';
 import { useSession } from "next-auth/react";
@@ -9,6 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Loader2 } from "lucide-react";
 import { Toaster } from 'sonner';
+import { DynamicBreadcrumbs } from '@/components/ui/DynamicBreadcrumbs';
 
 export default function DashboardLayout({
   children,
@@ -55,6 +56,15 @@ export default function DashboardLayout({
           {/* Main Content */}
           <div className="flex-1 ml-0 lg:ml-64 flex flex-col min-h-screen">
             <Header onMenuClick={() => setIsSidebarOpen(true)} />
+            
+            {/* Breadcrumbs (Mobile) */}
+            <div className="lg:hidden px-4 md:px-6 pt-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className="mx-auto max-w-7xl">
+                <DynamicBreadcrumbs />
+              </div>
+            </div>
+
+            {/* Main Content */}
             <main className="flex-1 overflow-y-auto p-4 md:p-6">
               <div className="mx-auto max-w-7xl">
                 {children}

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import { ThemeToggle } from '../ui/theme-toggle';
+import { DynamicBreadcrumbs } from '@/components/ui/DynamicBreadcrumbs';
 
 const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const { data: session, status } = useSession();
@@ -20,6 +21,7 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
+        {/* Mobile Menu Button */}
         <Button
           variant="ghost"
           size="icon"
@@ -29,6 +31,7 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
           <Menu className="h-5 w-5" />
         </Button>
 
+        {/* Logo (Mobile) */}
         <div className="flex items-center gap-2 lg:hidden">
           <div className="p-1 bg-primary/10 rounded-lg">
             <Library className="h-5 w-5 text-primary" />
@@ -36,9 +39,13 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
           <Link href={'/'} className="font-semibold">Byteinit</Link>
         </div>
 
-        <div className="flex-1" />
+        {/* Breadcrumbs (Desktop) */}
+        <div className="hidden lg:flex items-center gap-2 flex-1">
+          <DynamicBreadcrumbs />
+        </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        {/* Right Side Actions */}
+        <div className="flex items-center gap-2 sm:gap-4 ml-auto">
           <Button
             variant="default"
             className="h-7 w-7 rounded-full p-0 sm:hidden"

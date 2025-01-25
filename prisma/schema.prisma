@@ -34,6 +34,11 @@ enum ResourceCategory {
   OTHER
 }
 
+enum InteractionType {
+  VIEW
+  LIKE
+}
+
 model Resource {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   title         String
@@ -43,9 +48,14 @@ model Resource {
   category      ResourceCategory
   tags          String[]
   userId        String         @db.ObjectId
-  user          User           @relation(fields: [userId], references: [id])
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  uniqueViews    Int            @default(0)
+  totalViews     Int            @default(0)
+  likes         Int            @default(0)
+  interactions  ResourceInteraction[]
   
-  savedBy       SavedResource[]
+  savedResources SavedResource[] @relation("ResourceToSavedResource")
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -55,12 +65,25 @@ model SavedResource {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   userId        String         @db.ObjectId
   resourceId    String         @db.ObjectId
-  user          User           @relation(fields: [userId], references: [id])
-  resource      Resource       @relation(fields: [resourceId], references: [id])
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource      Resource       @relation("ResourceToSavedResource", fields: [resourceId], references: [id], onDelete: Cascade)
   
   savedAt       DateTime       @default(now())
 
   @@unique([userId, resourceId])
+}
+
+model ResourceInteraction {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  resourceId    String         @db.ObjectId
+  userId        String         @db.ObjectId
+  type          InteractionType
+  createdAt     DateTime       @default(now())
+
+  resource      Resource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, userId, type])
 }
  
 model User {
@@ -91,6 +114,7 @@ model User {
 
   resources     Resource[]
   savedResources SavedResource[]
+  interactions   ResourceInteraction[]
 
   // Optional for WebAuthn support
   Authenticator Authenticator[]
