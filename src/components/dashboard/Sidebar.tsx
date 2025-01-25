@@ -25,7 +25,7 @@ const Sidebar = ({ className }: { className?: string }) => {
     { icon: LayoutGrid, label: 'Dashboard', href: '/dashboard' },
     { icon: Library, label: 'My Resources', href: '/dashboard/resources' },
     { icon: BarChart2, label: 'Analytics', href: '/dashboard/analytics' },
-    { icon: Bookmark, label: 'Saved', href: '/dashboard/saved-resources' },
+    { icon: Bookmark, label: 'Saved', href: '/dashboard/resources/saved-resources' },
   ];
 
   const resourceNavItems = [
