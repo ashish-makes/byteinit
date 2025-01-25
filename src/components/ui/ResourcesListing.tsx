@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 // Resource interface definition
+// Resource interface definition
 interface Resource {
   id: string;
   title: string;
@@ -33,6 +34,7 @@ interface Resource {
     image?: string;
   };
   tags?: string[];
+  likes?: number; // Add the 'likes' property
 }
 
 // Predefined resource types and categories
@@ -118,6 +120,7 @@ function ResourceCardSkeleton() {
   }
 
 // Main ResourceListPage Component
+// Inside the ResourceListPage component
 export default function ResourceListPage() {
   // State management
   const [resources, setResources] = useState<Resource[]>([]);
@@ -134,18 +137,21 @@ export default function ResourceListPage() {
     fetchResources();
   }, [filter.type, filter.category]);
 
-  // Filter resources based on search and filter criteria
+  // Filter and sort resources based on search and filter criteria
   useEffect(() => {
     // Ensure resources is always an array before filtering
     const safeResources = Array.isArray(resources) ? resources : [];
-    
-    const filtered = safeResources.filter(
-      (resource) =>
-        (filter.type === "ALL" || resource.type === filter.type) &&
-        (filter.category === "ALL" || resource.category === filter.category) &&
-        (resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          resource.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+
+    const filtered = safeResources
+      .filter(
+        (resource) =>
+          (filter.type === "ALL" || resource.type === filter.type) &&
+          (filter.category === "ALL" || resource.category === filter.category) &&
+          (resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            resource.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+      .sort((a, b) => (b.likes || 0) - (a.likes || 0)); // Sort by likes in descending order
+
     setFilteredResources(filtered);
   }, [resources, filter, searchTerm]);
 
@@ -159,7 +165,7 @@ export default function ResourceListPage() {
 
       const response = await fetch(`/api/resources?${params}`);
       const data = await response.json();
-      
+
       // Ensure data is an array
       setResources(Array.isArray(data) ? data : []);
     } catch (error) {

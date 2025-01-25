@@ -101,7 +101,7 @@ export default function Header() {
         Profile
       </Link>
       <Link
-        href="/settings"
+        href="/dashboard/profile"
         className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
       >
         <Settings className="w-4 h-4" />

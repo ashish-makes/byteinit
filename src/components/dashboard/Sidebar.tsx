@@ -25,7 +25,7 @@ const Sidebar = ({ className }: { className?: string }) => {
     { icon: LayoutGrid, label: 'Dashboard', href: '/dashboard' },
     { icon: Library, label: 'My Resources', href: '/dashboard/resources' },
     { icon: BarChart2, label: 'Analytics', href: '/dashboard/analytics' },
-    { icon: Bookmark, label: 'Saved', href: '/dashboard/saved' },
+    { icon: Bookmark, label: 'Saved', href: '/dashboard/saved-resources' },
   ];
 
   const resourceNavItems = [
@@ -65,14 +65,16 @@ const Sidebar = ({ className }: { className?: string }) => {
               <TooltipProvider key={item.label}>
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3"
-                      size="sm"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                    </Button>
+                    <Link href={item.href} passHref>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-3"
+                        size="sm"
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </Button>
+                    </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={20}>
                     {item.label}
@@ -94,14 +96,16 @@ const Sidebar = ({ className }: { className?: string }) => {
                 <TooltipProvider key={item.label}>
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start gap-3"
-                        size="sm"
-                      >
-                        <item.icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{item.label}</span>
-                      </Button>
+                      <Link href={item.href} passHref>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start gap-3"
+                          size="sm"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{item.label}</span>
+                        </Button>
+                      </Link>
                     </TooltipTrigger>
                     <TooltipContent side="right" sideOffset={20}>
                       {item.label}
@@ -115,14 +119,16 @@ const Sidebar = ({ className }: { className?: string }) => {
           <Separator />
 
           {/* Settings */}
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3"
-            size="sm"
-          >
-            <Settings className="h-4 w-4 shrink-0" />
-            <span>Settings</span>
-          </Button>
+          <Link href="/dashboard/settings" passHref>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3"
+              size="sm"
+            >
+              <Settings className="h-4 w-4 shrink-0" />
+              <span>Settings</span>
+            </Button>
+          </Link>
         </div>
       </nav>
 

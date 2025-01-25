@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -11,11 +12,13 @@ import {
   Trash2,
   ThumbsUp,
   ThumbsUpIcon,
+  Flame, // Trending icon
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow, parseISO, format } from "date-fns";
-import { useResourceInteractions } from "@/hooks/useResourceInteractions"; // Adjust import path as needed
+import { useResourceInteractions } from "@/hooks/useResourceInteractions";
+import { motion } from "framer-motion";
 
 interface ResourceCardProps {
   id: string;
@@ -53,7 +56,7 @@ export function ResourceCard({
   onDelete,
   onEdit,
 }: ResourceCardProps) {
-  const { isLiked, toggleLike } = useResourceInteractions(id);
+  const { isLiked, likes: currentLikes, toggleLike } = useResourceInteractions(id, likes);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
@@ -70,14 +73,25 @@ export function ResourceCard({
     return format(parseISO(dateString), "MMMM dd, yyyy");
   };
 
+  // Check if the post is trending (e.g., more than 50 likes)
+  const isTrending = currentLikes > 3;
+
   return (
-    <figure
+    <motion.figure
       className={cn(
         "relative w-full h-full flex flex-col cursor-pointer overflow-hidden rounded-xl border p-4",
         "border-gray-950/[.1] bg-white hover:bg-gray-950/[.05]", // Light mode background
         "dark:border-gray-50/[.1] dark:bg-neutral-900 dark:hover:bg-neutral-800" // Dark mode background
       )}
+      // Removed scaling on hover
     >
+      {/* Trending Icon */}
+      {isTrending && (
+        <div className="absolute top-2 left-2 flex items-center justify-center p-1.5 rounded-full bg-orange-500/10">
+          <Flame className="size-4 text-orange-500" />
+        </div>
+      )}
+
       <div className="flex flex-row items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-950/[.1] dark:bg-gray-50/[.15]">
           <Tag className="size-5 text-gray-600 dark:text-gray-300" />
@@ -92,16 +106,19 @@ export function ResourceCard({
         </div>
         <div className="flex items-center gap-2">
           {onBookmarkClick && (
-            <button
+            <motion.button
               onClick={onBookmarkClick}
               className="flex-shrink-0 p-2 hover:bg-gray-950/[.05] dark:hover:bg-gray-50/[.15] rounded-full transition-colors"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              aria-label={isBookmarked ? "Remove bookmark" : "Bookmark"}
             >
               {isBookmarked ? (
                 <BookmarkX className="size-5 text-gray-600 dark:text-gray-300" />
               ) : (
                 <Bookmark className="size-5 text-gray-600 dark:text-gray-300" />
               )}
-            </button>
+            </motion.button>
           )}
         </div>
       </div>
@@ -116,6 +133,7 @@ export function ResourceCard({
             <span
               key={`${tag}-${index}`}
               className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-950/[.05] rounded-full dark:bg-gray-50/[.15] dark:text-gray-300"
+              // Removed scaling on hover
             >
               {tag}
             </span>
@@ -161,53 +179,80 @@ export function ResourceCard({
 
           <div className="flex items-center gap-3">
             {/* Like Button */}
-            <button
+            <motion.button
               onClick={toggleLike}
               className={cn(
-                "inline-flex items-center gap-1 px-2 py-1 rounded-full transition-colors",
-                "hover:bg-gray-950/[.05] dark:hover:bg-gray-50/[.15]",
-                isLiked
-                  ? "text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30"
+                "inline-flex items-center gap-1 px-2 py-1 rounded-full",
+                "transition-all duration-200 ease-in-out",
+                isLiked 
+                  ? "text-blue-600 bg-blue-100 dark:text-[#00e5bf] dark:bg-[#00e5bf]/10" 
                   : "text-gray-600 dark:text-gray-300"
               )}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              aria-label={isLiked ? "Unlike" : "Like"}
             >
               {isLiked ? (
-                <ThumbsUp className="size-4 fill-current" />
+                <ThumbsUp 
+                  className="size-4 fill-current transform origin-center" 
+                  style={{ 
+                    animation: 'like-pop 0.3s ease-in-out' 
+                  }}
+                />
               ) : (
                 <ThumbsUpIcon className="size-4" />
               )}
-              <span className="text-xs">{likes}</span>
-            </button>
+              <span className="text-xs">
+                {currentLikes}
+              </span>
+            </motion.button>
 
-            <a
+            <motion.a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-950/[.05] dark:bg-gray-50/[.15] hover:bg-gray-950/[.1] dark:hover:bg-gray-50/[.2] transition-colors"
+              className={cn(
+                "inline-flex items-center justify-center h-8 w-8 rounded-full",
+                "bg-gray-950/[0.05] dark:bg-gray-50/[0.15]", 
+                "hover:bg-gray-950/[0.1] dark:hover:bg-gray-50/[0.2]", 
+                "transition-colors"
+              )}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              aria-label="Open resource"
             >
               <ArrowUpRight className="size-4 text-gray-600 dark:text-gray-300" />
-            </a>
+            </motion.a>
 
             {onEdit && (
-              <Link
-                href={onEdit}
-                className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-950/[.05] dark:bg-gray-50/[.15] hover:bg-gray-950/[.1] dark:hover:bg-gray-50/[.2] transition-colors"
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
               >
-                <Edit className="size-4 text-gray-600 dark:text-gray-300" />
-              </Link>
+                <Link
+                  href={onEdit}
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-950/[.05] dark:bg-gray-50/[.15] hover:bg-gray-950/[.1] dark:hover:bg-gray-50/[.2] transition-colors"
+                  aria-label="Edit resource"
+                >
+                  <Edit className="size-4 text-gray-600 dark:text-gray-300" />
+                </Link>
+              </motion.div>
             )}
 
             {onDelete && (
-              <button
+              <motion.button
                 onClick={onDelete}
                 className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-destructive/10 hover:bg-destructive/20 transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                aria-label="Delete resource"
               >
                 <Trash2 className="size-4 text-destructive" />
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
       </div>
-    </figure>
+    </motion.figure>
   );
 }
