@@ -63,6 +63,20 @@ export async function POST(
   const userId = session.user.id;
 
   try {
+    // First, get the resource to check the owner
+    const resource = await prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { 
+        id: true, 
+        title: true, 
+        userId: true 
+      }
+    });
+
+    if (!resource) {
+      return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
+    }
+
     const existingLike = await prisma.resourceInteraction.findUnique({
       where: {
         resourceId_userId_type: {
@@ -74,6 +88,7 @@ export async function POST(
     });
 
     if (existingLike) {
+      // Unlike flow
       await prisma.$transaction([
         prisma.resourceInteraction.delete({
           where: {
@@ -88,6 +103,17 @@ export async function POST(
           where: { id: resourceId },
           data: { likes: { decrement: 1 } },
         }),
+        // Optionally remove notification
+        ...(resource.userId !== userId ? [
+          prisma.notification.deleteMany({
+            where: {
+              resourceId,
+              userId: resource.userId,
+              actionUserId: userId,
+              type: 'LIKE'
+            }
+          })
+        ] : [])
       ]);
 
       // Count total likes after unlike
@@ -104,6 +130,7 @@ export async function POST(
         message: 'Like removed',
       });
     } else {
+      // Like flow
       await prisma.$transaction([
         prisma.resourceInteraction.create({
           data: {
@@ -116,6 +143,19 @@ export async function POST(
           where: { id: resourceId },
           data: { likes: { increment: 1 } },
         }),
+        // Create notification only if not liking own resource
+        ...(resource.userId !== userId ? [
+          prisma.notification.create({
+            data: {
+              userId: resource.userId,
+              resourceId,
+              actionUserId: userId,
+              type: 'LIKE',
+              message: `liked your resource "${resource.title}"`,
+              read: false
+            }
+          })
+        ] : [])
       ]);
 
       // Count total likes after like

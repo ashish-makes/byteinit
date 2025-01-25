@@ -14,62 +14,76 @@ import {
 import Link from 'next/link';
 import { ThemeToggle } from '../ui/theme-toggle';
 import { DynamicBreadcrumbs } from '@/components/ui/DynamicBreadcrumbs';
+import { NotificationsDropdown } from '@/components/ui/Notification';
 
 const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const { data: session, status } = useSession();
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-        {/* Mobile Menu Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden"
-          onClick={onMenuClick}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-
-        {/* Logo (Mobile) */}
-        <div className="flex items-center gap-2 lg:hidden">
-          <div className="p-1 bg-primary/10 rounded-lg">
-            <Library className="h-5 w-5 text-primary" />
-          </div>
-          <Link href={'/'} className="font-semibold">Byteinit</Link>
-        </div>
-
-        {/* Breadcrumbs (Desktop) */}
-        <div className="hidden lg:flex items-center gap-2 flex-1">
-          <DynamicBreadcrumbs />
-        </div>
-
-        {/* Right Side Actions */}
-        <div className="flex items-center gap-2 sm:gap-4 ml-auto">
+      <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+        {/* Left Side: Logo and Mobile Menu */}
+        <div className="flex items-center gap-4">
+          {/* Mobile Menu Button */}
           <Button
-            variant="default"
-            className="h-7 w-7 rounded-full p-0 sm:hidden"
-            onClick={() => (window.location.href = '/dashboard/resources/new')}
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={onMenuClick}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Menu className="h-5 w-5" />
           </Button>
 
+{/* Logo (Visible only on mobile) */}
+<Link href="/" className="flex items-center gap-2 lg:hidden">
+  <div className="p-1 bg-primary/10 rounded-lg">
+    <Library className="h-5 w-5 text-primary" />
+  </div>
+  <span className="font-semibold">Byteinit</span>
+</Link>
+
+          {/* Breadcrumbs (Desktop) */}
+          <div className="hidden lg:flex items-center gap-2">
+            <DynamicBreadcrumbs />
+          </div>
+        </div>
+
+        {/* Right Side: Actions and User Menu */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Add Resource Button (Desktop) */}
           <Button
             variant="default"
-            className="gap-2 hidden sm:flex" size="sm"
+            className="gap-2 hidden sm:flex"
+            size="sm"
             onClick={() => (window.location.href = '/dashboard/resources/new')}
           >
             <Plus className="h-4 w-4" />
             Add Resource
           </Button>
 
+          {/* Add Resource Button (Mobile) */}
+          <Button
+            variant="default"
+            className="h-8 w-8 rounded-full p-0 sm:hidden"
+            onClick={() => (window.location.href = '/dashboard/resources/new')}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+
+          {/* Notifications Dropdown */}
+          <NotificationsDropdown />
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          {/* User Dropdown or Login Button */}
           {status === 'loading' ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-primary/10" />
           ) : session ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="relative h-8 w-8 rounded-full p-0 overflow-hidden"
                 >
                   {session.user?.image ? (
@@ -88,8 +102,12 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuLabel className="py-2">
-                  <p className="text-sm font-medium truncate">{session.user?.name || 'User'}</p>
-                  <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
+                  <p className="text-sm font-medium truncate">
+                    {session.user?.name || 'User'}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {session.user?.email}
+                  </p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <Link href="/dashboard/profile">
@@ -121,7 +139,6 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
               Login
             </Button>
           )}
-          <ThemeToggle/>
         </div>
       </div>
     </header>

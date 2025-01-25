@@ -56,6 +56,7 @@ model Resource {
   interactions  ResourceInteraction[]
   
   savedResources SavedResource[] @relation("ResourceToSavedResource")
+  notifications Notification[]
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -86,6 +87,22 @@ model ResourceInteraction {
   @@unique([resourceId, userId, type])
 }
  
+model Notification {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String    @db.ObjectId
+  resourceId    String    @db.ObjectId
+  type          String    // e.g., "LIKE", "SAVE"
+  message       String
+  actionUserId  String?   @db.ObjectId  // User who performed the action
+  read          Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  actionUser    User?     @relation("UserActions", fields: [actionUserId], references: [id], onDelete: Cascade)
+  resource      Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+}
+
 model User {
   id            String          @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
@@ -115,6 +132,8 @@ model User {
   resources     Resource[]
   savedResources SavedResource[]
   interactions   ResourceInteraction[]
+  receivedNotifications Notification[] @relation("UserNotifications")
+  sentActions           Notification[] @relation("UserActions")
 
   // Optional for WebAuthn support
   Authenticator Authenticator[]
