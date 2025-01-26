@@ -19,6 +19,12 @@ import Link from "next/link";
 import { formatDistanceToNow, parseISO, format } from "date-fns";
 import { useResourceInteractions } from "@/hooks/useResourceInteractions";
 import { motion } from "framer-motion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Shadcn UI Tooltip
 
 interface ResourceCardProps {
   id: string;
@@ -83,15 +89,7 @@ export function ResourceCard({
         "border-gray-950/[.1] bg-white hover:bg-gray-950/[.05]", // Light mode background
         "dark:border-gray-50/[.1] dark:bg-neutral-900 dark:hover:bg-neutral-800" // Dark mode background
       )}
-      // Removed scaling on hover
     >
-      {/* Trending Icon */}
-      {isTrending && (
-        <div className="absolute top-2 left-2 flex items-center justify-center p-1.5 rounded-full bg-orange-500/10">
-          <Flame className="size-4 text-orange-500" />
-        </div>
-      )}
-
       <div className="flex flex-row items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-950/[.1] dark:bg-gray-50/[.15]">
           <Tag className="size-5 text-gray-600 dark:text-gray-300" />
@@ -133,7 +131,6 @@ export function ResourceCard({
             <span
               key={`${tag}-${index}`}
               className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-950/[.05] rounded-full dark:bg-gray-50/[.15] dark:text-gray-300"
-              // Removed scaling on hover
             >
               {tag}
             </span>
@@ -178,6 +175,22 @@ export function ResourceCard({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Trending Icon with Tooltip */}
+            {isTrending && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1 p-1.5 rounded-full bg-orange-500/10 cursor-pointer">
+                      <Flame className="size-4 text-orange-500" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>This post is trending!</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {/* Like Button */}
             <motion.button
               onClick={toggleLike}
