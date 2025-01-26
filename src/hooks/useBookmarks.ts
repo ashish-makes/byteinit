@@ -56,40 +56,37 @@ export function useBookmarks() {
       toast.error("You must be logged in to save resources")
       return
     }
-
+  
     try {
       const isCurrentlySaved = savedResources.some((sr) => sr.resourceId === resourceId)
-      if (isCurrentlySaved) {
-        // Remove from saved resources
-        const response = await fetch(`/api/saved-resources?resourceId=${resourceId}`, {
-          method: "DELETE",
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to remove saved resource")
+      
+      const response = await fetch(
+        isCurrentlySaved 
+          ? `/api/saved-resources?resourceId=${resourceId}`
+          : "/api/saved-resources", 
+        {
+          method: isCurrentlySaved ? "DELETE" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: !isCurrentlySaved ? JSON.stringify({ resourceId }) : undefined
         }
-
+      )
+  
+      const responseData = await response.json()
+  
+      if (!response.ok) {
+        throw new Error(responseData.error || "Operation failed")
+      }
+  
+      if (isCurrentlySaved) {
         setSavedResources((prev) => prev.filter((sr) => sr.resourceId !== resourceId))
         toast.success("Resource removed from saved")
       } else {
-        // Add to saved resources
-        const response = await fetch("/api/saved-resources", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ resourceId }),
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to save resource")
-        }
-
-        const newSavedResource = await response.json()
-        setSavedResources((prev) => [...prev, newSavedResource])
+        setSavedResources((prev) => [...prev, responseData])
         toast.success("Resource saved successfully")
       }
     } catch (error) {
       console.error("Bookmark toggle error:", error)
-      toast.error("Could not update saved resources. Please try again.")
+      toast.error(error instanceof Error ? error.message : "Could not update saved resources")
     }
   }
 
@@ -105,4 +102,3 @@ export function useBookmarks() {
     refreshSavedResources,
   }
 }
-
