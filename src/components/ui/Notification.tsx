@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 interface Notification {
   id: string
-  type: "like" | "save" | "other"
+  type: "LIKE" | "SAVE" | "OTHER"
   message: string
   read: boolean
   timeAgo: string
@@ -32,7 +32,7 @@ interface Notification {
 interface NotificationsResponse {
   notifications: Notification[]
   unreadCount: number
-  error?: string
+  empty: boolean
 }
 
 export function NotificationsDropdown() {
@@ -53,12 +53,16 @@ export function NotificationsDropdown() {
       const response = await fetch("/api/notifications")
       const data: NotificationsResponse = await response.json()
 
-      if (data.error) {
-        throw new Error(data.error)
-      }
+      console.log("Notifications API Response:", data)
 
-      setNotifications(data.notifications)
-      setUnreadCount(data.unreadCount)
+      if (data.notifications) {
+        setNotifications(data.notifications)
+        setUnreadCount(data.unreadCount)
+      } else {
+        console.warn("No notifications received")
+        setNotifications([])
+        setUnreadCount(0)
+      }
     } catch (error) {
       console.error("Failed to fetch notifications", error)
       setNotifications([])
@@ -157,23 +161,31 @@ export function NotificationsDropdown() {
                     : "hover:bg-muted/10 dark:hover:bg-muted/10"
                 }`}
               >
-                {notification.actionUser.image ? (
-                  <Image
-                    src={notification.actionUser.image || "/placeholder.svg"}
-                    alt={notification.actionUser.name || "User"}
-                    width={32}
-                    height={32}
-                    className="rounded-full h-8 w-8"
-                  />
-                ) : (
-                  <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4" />
-                  </div>
-                )}
+                <div className="relative">
+                  {notification.actionUser.image ? (
+                    <Image
+                      src={notification.actionUser.image || "/placeholder.svg"}
+                      alt={notification.actionUser.name || "User"}
+                      width={32}
+                      height={32}
+                      className="rounded-full h-8 w-8"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4" />
+                    </div>
+                  )}
+<div className="absolute -bottom-1 -right-1 rounded-full bg-background p-0.5">
+  {notification.type === "LIKE" && (
+    <Heart className="h-3 w-3 text-red-500 dark:text-[#ff6b6b] fill-current" />
+  )}
+  {notification.type === "SAVE" && (
+    <Bookmark className="h-3 w-3 text-blue-500 dark:text-[#00e5bf] fill-current" />
+  )}
+</div>
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">
-                    {notification.type === "like" && <Heart className="inline h-3 w-3 text-red-500 mr-1" />}
-                    {notification.type === "save" && <Bookmark className="inline h-3 w-3 text-blue-500 mr-1" />}
                     <span className="font-semibold">{notification.actionUser.name}</span> {notification.message}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">{notification.timeAgo}</p>

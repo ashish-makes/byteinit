@@ -52,7 +52,8 @@ model Resource {
 
   uniqueViews    Int            @default(0)
   totalViews     Int            @default(0)
-  likes         Int            @default(0)
+  likes         Int             @default(0)
+  saves         Int             @default(0)
   interactions  ResourceInteraction[]
   
   savedResources SavedResource[] @relation("ResourceToSavedResource")

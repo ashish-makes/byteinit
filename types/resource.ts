@@ -11,5 +11,13 @@ export interface Resource {
   export interface SavedResource {
     id: string;
     resourceId: string;
+    saves: number;
+    resource?: {
+      id: string;
+      title: string;
+      description: string;
+      url: string;
+      // Add other relevant resource properties
+    };
   }
   
