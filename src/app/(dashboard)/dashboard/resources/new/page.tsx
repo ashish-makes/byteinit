@@ -28,20 +28,80 @@ import { Label } from '@/components/ui/label';
 const resourceSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   url: z.string().url("Please enter a valid URL"),
-  type: z.enum(["LIBRARY", "TOOL", "FRAMEWORK", "TUTORIAL", "TEMPLATE", "OTHER"]),
-  category: z.enum(["FRONTEND", "BACKEND", "FULLSTACK", "DEVOPS", "MOBILE", "AI_ML", "DATABASE", "SECURITY", "OTHER"]),
+  type: z.enum([
+    "LIBRARY", 
+    "TOOL", 
+    "FRAMEWORK", 
+    "TUTORIAL", 
+    "TEMPLATE", 
+    "ICON_SET", 
+    "ILLUSTRATION", 
+    "COMPONENT_LIBRARY", 
+    "CODE_SNIPPET", 
+    "API", 
+    "DOCUMENTATION", 
+    "COURSE", 
+    "OTHER"
+  ]),
+  category: z.enum([
+    "FRONTEND", 
+    "BACKEND", 
+    "FULLSTACK", 
+    "DEVOPS", 
+    "MOBILE", 
+    "AI_ML", 
+    "DATABASE", 
+    "SECURITY", 
+    "UI_UX", 
+    "DESIGN", 
+    "MACHINE_LEARNING", 
+    "CLOUD", 
+    "OTHER"
+  ]),
   description: z.string().min(10, "Description must be at least 10 characters"),
   tags: z.string().optional().nullable()
 });
 
 const RESOURCE_TYPES = [
-  "LIBRARY", "TOOL", "FRAMEWORK", "TUTORIAL", "TEMPLATE", "OTHER"
+  "LIBRARY", 
+  "TOOL", 
+  "FRAMEWORK", 
+  "TUTORIAL", 
+  "TEMPLATE", 
+  "ICON_SET", 
+  "ILLUSTRATION", 
+  "COMPONENT_LIBRARY", 
+  "CODE_SNIPPET", 
+  "API", 
+  "DOCUMENTATION", 
+  "COURSE", 
+  "OTHER"
 ];
 
 const RESOURCE_CATEGORIES = [
-  "FRONTEND", "BACKEND", "FULLSTACK", "DEVOPS", 
-  "MOBILE", "AI_ML", "DATABASE", "SECURITY", "OTHER"
+  "FRONTEND", 
+  "BACKEND", 
+  "FULLSTACK", 
+  "DEVOPS", 
+  "MOBILE", 
+  "AI_ML", 
+  "DATABASE", 
+  "SECURITY", 
+  "UI_UX", 
+  "DESIGN", 
+  "MACHINE_LEARNING", 
+  "CLOUD", 
+  "OTHER"
 ];
+
+// Helper function to format enum values for display
+const formatEnumValue = (value: string) => {
+  return value
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ');
+};
 
 interface TagInputProps {
   value: string;
@@ -225,7 +285,7 @@ export default function ResourceUploadForm() {
                     <SelectContent>
                       {RESOURCE_TYPES.map((type) => (
                         <SelectItem key={type} value={type}>
-                          {type.charAt(0) + type.slice(1).toLowerCase()}
+                          {formatEnumValue(type)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -247,7 +307,7 @@ export default function ResourceUploadForm() {
                     <SelectContent>
                       {RESOURCE_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
-                          {category.charAt(0) + category.slice(1).toLowerCase().replace('_', ' ')}
+                          {formatEnumValue(category)}
                         </SelectItem>
                       ))}
                     </SelectContent>

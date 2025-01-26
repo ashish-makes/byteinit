@@ -26,8 +26,36 @@ const resourceSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   url: z.string().url("Invalid URL"),
-  type: z.enum(["LIBRARY", "TOOL", "FRAMEWORK", "TUTORIAL", "TEMPLATE", "OTHER"]),
-  category: z.enum(["FRONTEND", "BACKEND", "FULLSTACK", "DEVOPS", "MOBILE", "AI_ML", "DATABASE", "SECURITY", "OTHER"]),
+  type: z.enum([
+    "LIBRARY", 
+    "TOOL", 
+    "FRAMEWORK", 
+    "TUTORIAL", 
+    "TEMPLATE", 
+    "ICON_SET", 
+    "ILLUSTRATION", 
+    "COMPONENT_LIBRARY", 
+    "CODE_SNIPPET", 
+    "API", 
+    "DOCUMENTATION", 
+    "COURSE", 
+    "OTHER"
+  ]),
+  category: z.enum([
+    "FRONTEND", 
+    "BACKEND", 
+    "FULLSTACK", 
+    "DEVOPS", 
+    "MOBILE", 
+    "AI_ML", 
+    "DATABASE", 
+    "SECURITY", 
+    "UI_UX", 
+    "DESIGN", 
+    "MACHINE_LEARNING", 
+    "CLOUD", 
+    "OTHER"
+  ]),
   tags: z.string().optional()
 });
 
@@ -67,6 +95,15 @@ export default function ResourceUploadForm() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Helper function to format enum values for display
+  const formatEnumValue = (value: string) => {
+    return value
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(' ');
   };
 
   return (
@@ -151,9 +188,23 @@ export default function ResourceUploadForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {["LIBRARY", "TOOL", "FRAMEWORK", "TUTORIAL", "TEMPLATE", "OTHER"].map(type => (
+                          {[
+                            "LIBRARY", 
+                            "TOOL", 
+                            "FRAMEWORK", 
+                            "TUTORIAL", 
+                            "TEMPLATE", 
+                            "ICON_SET", 
+                            "ILLUSTRATION", 
+                            "COMPONENT_LIBRARY", 
+                            "CODE_SNIPPET", 
+                            "API", 
+                            "DOCUMENTATION", 
+                            "COURSE", 
+                            "OTHER"
+                          ].map(type => (
                             <SelectItem key={type} value={type}>
-                              {type.charAt(0) + type.slice(1).toLowerCase()}
+                              {formatEnumValue(type)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -176,9 +227,23 @@ export default function ResourceUploadForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {["FRONTEND", "BACKEND", "FULLSTACK", "DEVOPS", "MOBILE", "AI_ML", "DATABASE", "SECURITY", "OTHER"].map(category => (
+                          {[
+                            "FRONTEND", 
+                            "BACKEND", 
+                            "FULLSTACK", 
+                            "DEVOPS", 
+                            "MOBILE", 
+                            "AI_ML", 
+                            "DATABASE", 
+                            "SECURITY", 
+                            "UI_UX", 
+                            "DESIGN", 
+                            "MACHINE_LEARNING", 
+                            "CLOUD", 
+                            "OTHER"
+                          ].map(category => (
                             <SelectItem key={category} value={category}>
-                              {category.replace('_', '/').charAt(0) + category.slice(1).toLowerCase()}
+                              {formatEnumValue(category)}
                             </SelectItem>
                           ))}
                         </SelectContent>

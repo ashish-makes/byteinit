@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-"use client";
+// src/components/ResourceListPage.tsx
+
+"use client"
 
 import { useState, useEffect } from "react";
 import { ResourceCard } from "./ResourceCard";
@@ -20,7 +22,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 // Resource interface definition
-// Resource interface definition
 interface Resource {
   id: string;
   title: string;
@@ -34,7 +35,16 @@ interface Resource {
     image?: string;
   };
   tags?: string[];
-  likes?: number; // Add the 'likes' property
+  likes?: number;
+}
+
+interface ResourceListPageProps {
+  initialFilter?: {
+    type: string;
+    category: string;
+  };
+  hideCategoryFilter?: boolean; // Hide Type and Category filters
+  headerTitle?: string; // Custom header title
 }
 
 // Predefined resource types and categories
@@ -45,6 +55,13 @@ const resourceTypes = [
   "FRAMEWORK",
   "TUTORIAL",
   "TEMPLATE",
+  "ICON_SET",
+  "ILLUSTRATION",
+  "COMPONENT_LIBRARY",
+  "CODE_SNIPPET",
+  "API",
+  "DOCUMENTATION",
+  "COURSE",
   "OTHER",
 ];
 
@@ -58,90 +75,93 @@ const resourceCategories = [
   "AI_ML",
   "DATABASE",
   "SECURITY",
+  "UI_UX",
+  "DESIGN",
+  "MACHINE_LEARNING",
+  "CLOUD",
   "OTHER",
 ];
 
 // Skeleton Component for ResourceCard
 function ResourceCardSkeleton() {
-    return (
-      <div
-        className={cn(
-          "relative w-full h-full flex flex-col overflow-hidden rounded-xl border p-4",
-          "border-gray-950/[.1] bg-white dark:border-gray-50/[.1] dark:bg-neutral-900" // Darker background for dark mode
-        )}
-      >
-        {/* Icon and Title Section */}
-        <div className="flex flex-row items-center gap-3">
-          {/* Icon Skeleton */}
-          <Skeleton className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
-  
-          {/* Title and Category Skeleton */}
-          <div className="flex flex-col flex-1 min-w-0">
-            <Skeleton className="h-4 w-3/4 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
-            <Skeleton className="h-3 w-1/2 mt-2 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
-          </div>
-  
-          {/* Bookmark Button Skeleton */}
-          <Skeleton className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+  return (
+    <div
+      className={cn(
+        "relative w-full h-full flex flex-col overflow-hidden rounded-xl border p-4",
+        "border-gray-950/[.1] bg-white dark:border-gray-50/[.1] dark:bg-neutral-900"
+      )}
+    >
+      {/* Icon and Title Section */}
+      <div className="flex flex-row items-center gap-3">
+        {/* Icon Skeleton */}
+        <Skeleton className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
+
+        {/* Title and Category Skeleton */}
+        <div className="flex flex-col flex-1 min-w-0">
+          <Skeleton className="h-4 w-3/4 bg-gray-200 dark:bg-gray-800" />
+          <Skeleton className="h-3 w-1/2 mt-2 bg-gray-200 dark:bg-gray-800" />
         </div>
-  
-        {/* Description Skeleton */}
-        <div className="mt-3 space-y-2">
-          <Skeleton className="h-3 w-full bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
-          <Skeleton className="h-3 w-2/3 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
+
+        {/* Bookmark Button Skeleton */}
+        <Skeleton className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" />
+      </div>
+
+      {/* Description Skeleton */}
+      <div className="mt-3 space-y-2">
+        <Skeleton className="h-3 w-full bg-gray-200 dark:bg-gray-800" />
+        <Skeleton className="h-3 w-2/3 bg-gray-200 dark:bg-gray-800" />
+      </div>
+
+      {/* Tags Section Skeleton */}
+      <div className="flex flex-wrap gap-2 mt-3">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <Skeleton
+            key={index}
+            className="h-6 w-16 rounded-full bg-gray-200 dark:bg-gray-800"
+          />
+        ))}
+      </div>
+
+      {/* Author and Date Section Skeleton */}
+      <div className="mt-4 flex flex-col gap-2">
+        {/* Author Skeleton */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded-full bg-gray-200 dark:bg-gray-800" />
+          <Skeleton className="h-3 w-24 bg-gray-200 dark:bg-gray-800" />
         </div>
-  
-        {/* Tags Section Skeleton */}
-        <div className="flex flex-wrap gap-2 mt-3">
-          {Array.from({ length: 2 }).map((_, index) => (
-            <Skeleton
-              key={index}
-              className="h-6 w-16 rounded-full bg-gray-200 dark:bg-gray-800" // Darker shade
-            />
-          ))}
-        </div>
-  
-        {/* Author and Date Section Skeleton */}
-        <div className="mt-4 flex flex-col gap-2">
-          {/* Author Skeleton */}
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded-full bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
-            <Skeleton className="h-3 w-24 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
-          </div>
-  
-          {/* Date and Link Skeleton */}
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-3 w-20 bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
-            <Skeleton className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" /> {/* Darker shade */}
-          </div>
+
+        {/* Date and Link Skeleton */}
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3 w-20 bg-gray-200 dark:bg-gray-800" />
+          <Skeleton className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800" />
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-// Main ResourceListPage Component
-// Inside the ResourceListPage component
-export default function ResourceListPage() {
-  // State management
+export default function ResourceListPage({
+  initialFilter,
+  hideCategoryFilter = false, // Default to false
+  headerTitle = "Developer Resources", // Default header title
+}: ResourceListPageProps) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
-  const [filter, setFilter] = useState({ type: "ALL", category: "ALL" });
+  const [filter, setFilter] = useState({
+    type: initialFilter?.type || "ALL",
+    category: initialFilter?.category || "ALL",
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Bookmark hook
   const { savedResourceIds, toggleBookmark } = useBookmarks();
 
-  // Fetch resources when filter changes
   useEffect(() => {
     fetchResources();
   }, [filter.type, filter.category]);
 
-  // Filter and sort resources based on search and filter criteria
   useEffect(() => {
-    // Ensure resources is always an array before filtering
     const safeResources = Array.isArray(resources) ? resources : [];
-
     const filtered = safeResources
       .filter(
         (resource) =>
@@ -150,12 +170,10 @@ export default function ResourceListPage() {
           (resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             resource.description.toLowerCase().includes(searchTerm.toLowerCase()))
       )
-      .sort((a, b) => (b.likes || 0) - (a.likes || 0)); // Sort by likes in descending order
-
+      .sort((a, b) => (b.likes || 0) - (a.likes || 0));
     setFilteredResources(filtered);
   }, [resources, filter, searchTerm]);
 
-  // Fetch resources from API
   const fetchResources = async () => {
     setIsLoading(true);
     try {
@@ -165,30 +183,26 @@ export default function ResourceListPage() {
 
       const response = await fetch(`/api/resources?${params}`);
       const data = await response.json();
-
-      // Ensure data is an array
       setResources(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error("Failed to fetch resources");
-      setResources([]); // Set to empty array on error
+      setResources([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle bookmark toggle
   const handleBookmarkClick = async (resourceId: string) => {
     await toggleBookmark(resourceId);
   };
 
-  // Render the component
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-3xl font-bold text-neutral-900 dark:text-white flex items-center gap-3">
           <Layers className="h-8 w-8 text-neutral-600" />
-          Developer Resources
+          {headerTitle} {/* Dynamic header title */}
         </h1>
         <div className="flex items-center gap-2">
           <div className="text-neutral-500">
@@ -201,40 +215,44 @@ export default function ResourceListPage() {
       {/* Filters and Search */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Resource Type Filter */}
-        <Select
-          onValueChange={(value) => setFilter((prev) => ({ ...prev, type: value }))}
-          value={filter.type}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Resource Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {resourceTypes.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type === "ALL" ? "All Types" : type.charAt(0) + type.slice(1).toLowerCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {!hideCategoryFilter && (
+          <Select
+            onValueChange={(value) => setFilter((prev) => ({ ...prev, type: value }))}
+            value={filter.type}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Resource Type" />
+            </SelectTrigger>
+            <SelectContent>
+              {resourceTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type === "ALL" ? "All Types" : type.charAt(0) + type.slice(1).toLowerCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {/* Resource Category Filter */}
-        <Select
-          onValueChange={(value) => setFilter((prev) => ({ ...prev, category: value }))}
-          value={filter.category}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            {resourceCategories.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category === "ALL"
-                  ? "All Categories"
-                  : category.replace("_", "/").charAt(0) + category.slice(1).toLowerCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {!hideCategoryFilter && (
+          <Select
+            onValueChange={(value) => setFilter((prev) => ({ ...prev, category: value }))}
+            value={filter.category}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {resourceCategories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category === "ALL"
+                    ? "All Categories"
+                    : category.replace("_", "/").charAt(0) + category.slice(1).toLowerCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {/* Search Input */}
         <div className="relative">

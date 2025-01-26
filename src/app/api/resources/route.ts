@@ -3,25 +3,58 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
 import { auth } from '@/auth';
-import { ResourceCategory, ResourceType, InteractionType } from '@prisma/client';
+import { ResourceCategory, ResourceType } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session) {
+  
+  if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json();
   try {
+    // Ensure the request body is valid
+    const body = await req.json();
+    
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid payload format' }, { status: 400 });
+    }
+
+    const { title, description, url, type, category, tags } = body;
+
+    // Validate required fields from schema
+    if (!title || !description || !url || !type || !category) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Create resource with validated data
     const resource = await prisma.resource.create({
       data: {
-        ...body,
-        userId: session.user.id
+        title,
+        description,
+        url,
+        type: type as ResourceType,
+        category: category as ResourceCategory,
+        tags: Array.isArray(tags) ? tags : [],
+        userId: session.user.id,
+        // Initialize counters
+        uniqueViews: 0,
+        totalViews: 0,
+        likes: 0,
+        saves: 0
       }
     });
+
     return NextResponse.json(resource, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create resource' }, { status: 500 });
+    console.error('Resource creation error:', error);
+    return NextResponse.json(
+      { error: 'Failed to create resource' },
+      { status: 500 }
+    );
   }
 }
 
