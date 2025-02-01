@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "./button"
 import { Smile } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface EmojiPickerProps {
   onChange: (emoji: string) => void
@@ -15,6 +16,7 @@ interface EmojiPickerProps {
 
 export function EmojiPicker({ onChange }: EmojiPickerProps) {
   const { theme } = useTheme()
+  const isMobile = useMediaQuery("(max-width: 768px)")
 
   return (
     <Popover>
@@ -24,15 +26,24 @@ export function EmojiPicker({ onChange }: EmojiPickerProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        side="right" 
-        sideOffset={40}
-        className="mb-16 border-none bg-transparent shadow-none drop-shadow-none"
+        side={isMobile ? "bottom" : "right"}
+        align={isMobile ? "center" : "start"}
+        sideOffset={isMobile ? 10 : 40}
+        className={`
+          border-none bg-transparent shadow-none drop-shadow-none
+          ${isMobile ? 'w-screen h-[350px] mb-0' : 'mb-16'}
+        `}
       >
-        <Picker
-          theme={theme === "dark" ? "dark" : "light"}
-          data={data}
-          onEmojiSelect={(emoji: { native: string }) => onChange(emoji.native)}
-        />
+        <div className={`
+          ${isMobile ? 'scale-[0.85] -mt-6' : ''}
+          transform-gpu
+        `}>
+          <Picker
+            theme={theme === "dark" ? "dark" : "light"}
+            data={data}
+            onEmojiSelect={(emoji: { native: string }) => onChange(emoji.native)}
+          />
+        </div>
       </PopoverContent>
     </Popover>
   )
