@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -23,14 +24,14 @@ import Link from 'next/link';
 const Sidebar = ({ className }: { className?: string }) => {
   const primaryNavItems = [
     { icon: LayoutGrid, label: 'Dashboard', href: '/dashboard' },
-    { icon: Library, label: 'My Resources', href: '/dashboard/resources' },
-    { icon: BarChart2, label: 'Analytics', href: '/dashboard/analytics' },
+    // { icon: Library, label: 'My Resources', href: '/dashboard/resources' },
+    // { icon: BarChart2, label: 'Analytics', href: '/dashboard/analytics' },
     { icon: Bookmark, label: 'Saved', href: '/dashboard/resources/saved-resources' },
   ];
 
   const resourceNavItems = [
     { icon: PlusCircle, label: 'Add New Resource', href: '/dashboard/resources/new' },
-    { icon: ListPlus, label: 'Manage Resources', href: '/dashboard/resources/manage' },
+    { icon: ListPlus, label: 'Manage Resources', href: '/dashboard/resources/' },
   ];
 
   return (
@@ -119,7 +120,7 @@ const Sidebar = ({ className }: { className?: string }) => {
           <Separator />
 
           {/* Settings */}
-          <Link href="/dashboard/settings" passHref>
+          <Link href="/dashboard/profile" passHref>
             <Button
               variant="ghost"
               className="w-full justify-start gap-3"

@@ -34,12 +34,12 @@ export default function DashboardLayout({
   return (
     <>
       <TooltipProvider>
-        <div className="min-h-screen bg-muted/30 flex">
-          {/* Mobile Sidebar - Overlay */}
+        <div className="min-h-screen bg-muted/30 flex flex-col lg:flex-row">
+          {/* Mobile Sidebar Overlay */}
           <div 
             className={cn(
-              "fixed inset-0 z-40 bg-background/80 backdrop-blur-sm",
-              isSidebarOpen ? "block lg:hidden" : "hidden"
+              "fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden",
+              isSidebarOpen ? "block" : "hidden"
             )}
             onClick={() => setIsSidebarOpen(false)}
           />
@@ -47,14 +47,13 @@ export default function DashboardLayout({
           {/* Sidebar */}
           <Sidebar 
             className={cn(
-              "fixed left-0 top-0 z-40 w-64 h-screen overflow-y-auto",
-              "transition-transform duration-200",
+              "fixed left-0 top-0 z-40 w-64 h-screen overflow-y-auto transition-transform duration-200",
               isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}
           />
           
           {/* Main Content */}
-          <div className="flex-1 ml-0 lg:ml-64 flex flex-col min-h-screen">
+          <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
             <Header onMenuClick={() => setIsSidebarOpen(true)} />
             
             {/* Breadcrumbs (Mobile) */}
