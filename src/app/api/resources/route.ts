@@ -73,9 +73,15 @@ export async function GET(req: NextRequest) {
       },
       include: {
         user: {
-          select: { 
+          select: {
             name: true,
-            image: true 
+            image: true,
+          },
+        },
+        reactions: {
+          select: {
+            emoji: true,
+            userId: true,
           }
         },
         _count: {
@@ -95,13 +101,26 @@ export async function GET(req: NextRequest) {
       take: limit
     });
 
-    // Transform resources to include like count
-    const transformedResources = resources.map(resource => ({
-      ...resource,
-      likes: resource._count.interactions
-    }));
+    // Group reactions by emoji for each resource
+    const resourcesWithFormattedReactions = resources.map(resource => {
+      const reactionCounts = resource.reactions.reduce((acc, reaction) => {
+        acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
 
-    return NextResponse.json(transformedResources);
+      const formattedReactions = Object.entries(reactionCounts).map(([emoji, count]) => ({
+        emoji,
+        _count: count
+      }));
+
+      return {
+        ...resource,
+        reactions: formattedReactions,
+        userReactions: resource.reactions
+      };
+    });
+
+    return NextResponse.json(resourcesWithFormattedReactions);
   } catch (error) {
     console.error('Resources fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch resources' }, { status: 500 });

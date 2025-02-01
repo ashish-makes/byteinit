@@ -74,14 +74,21 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 
+// Add after imports
+type TimeRange = 'today' | '7d' | '30d' | '3m' | '6m' | '1y' | 'all';
+
 // Define the data type for the table
-type Resource = {
-  id: string
-  title: string
-  category: string
-  type: string
-  likes: number
-  createdAt: string
+interface Resource {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  type: string;
+  category: string;
+  likes: number;
+  saves: number;
+  createdAt: string;
+  userId: string;
 }
 
 // Define the data type for the chart
@@ -94,6 +101,7 @@ type ChartData = {
 export default function Dashboard() {
   const { data: session } = useSession()
   const router = useRouter()
+  const [selectedRange, setSelectedRange] = useState<TimeRange>('30d')
   const [stats, setStats] = useState({
     totalResources: { value: 0, trend: 0 },
     savedResources: { value: 0, trend: 0 },
@@ -105,8 +113,6 @@ export default function Dashboard() {
   const [sorting, setSorting] = useState<"asc" | "desc" | null>(null)
   const [resourceToDelete, setResourceToDelete] = useState<string | null>(null)
   const [chartData, setChartData] = useState<ChartData>([])
-  // Use a state variable for the selected time range (7 days, 30 days, 6 months = 180 days)
-  const [selectedRange, setSelectedRange] = useState<number>(30)
 
   // Define chart configuration for shadcn UI
   const chartConfig = {
@@ -124,79 +130,91 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch user's resources
         const resourcesResponse = await fetch(`/api/resources?userId=${session?.user?.id}`)
         const allResources = await resourcesResponse.json()
         const userResources = allResources.filter(
-          (resource: any) => resource.userId === session?.user?.id,
+          (resource: Resource) => resource.userId === session?.user?.id,
         )
 
-        const savedResponse = await fetch("/api/saved-resources")
-        const savedResources = await savedResponse.json()
-
-        const totalLikes = userResources.reduce(
-          (acc: number, resource: any) => acc + (resource.likes || 0),
-          0,
-        )
-
+        // Fetch saved resources stats
+        const savedResponse = await fetch("/api/saved-resources/stats")
+        const savesData = await savedResponse.json()
+        
         const now = new Date()
-        const thisMonth = now.getMonth()
-        const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1
-        const thisYear = now.getFullYear()
-        const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear
+        const today = new Date(now.setHours(0, 0, 0, 0))
+        const yesterday = new Date(today)
+        yesterday.setDate(yesterday.getDate() - 1)
 
-        const thisMonthResources = userResources.filter((resource: any) => {
-          const createdAt = new Date(resource.createdAt)
-          return createdAt.getMonth() === thisMonth && createdAt.getFullYear() === thisYear
-        })
+        // Helper function for date filtering
+        const isInDay = (date: Date, targetDate: Date) => 
+          date.getFullYear() === targetDate.getFullYear() &&
+          date.getMonth() === targetDate.getMonth() &&
+          date.getDate() === targetDate.getDate()
 
-        const lastMonthResources = userResources.filter((resource: any) => {
-          const createdAt = new Date(resource.createdAt)
-          return createdAt.getMonth() === lastMonth && createdAt.getFullYear() === lastMonthYear
-        })
+        // Calculate resources created today/yesterday
+        const todayResources = userResources.filter((r: Resource) => 
+          isInDay(new Date(r.createdAt), today)
+        )
+        const yesterdayResources = userResources.filter((r: Resource) => 
+          isInDay(new Date(r.createdAt), yesterday)
+        )
 
-        const calculateTrend = (current: number, previous: number) => {
-          if (previous === 0) return current > 0 ? 100 : 0
-          return Math.round(((current - previous) / previous) * 100)
-        }
+        // Calculate likes today/yesterday
+        const todayLikes = userResources.reduce((acc: number, r: Resource) => {
+          if (isInDay(new Date(r.createdAt), today)) {
+            return acc + (r.likes || 0)
+          }
+          return acc
+        }, 0)
+
+        const yesterdayLikes = userResources.reduce((acc: number, r: Resource) => {
+          if (isInDay(new Date(r.createdAt), yesterday)) {
+            return acc + (r.likes || 0)
+          }
+          return acc
+        }, 0)
 
         setStats({
           totalResources: {
             value: userResources.length,
-            trend: calculateTrend(thisMonthResources.length, lastMonthResources.length),
+            trend: calculateTrend(todayResources.length, yesterdayResources.length),
           },
           savedResources: {
-            value: savedResources.length,
-            trend: calculateTrend(
-              savedResources.filter((r: any) => new Date(r.createdAt).getMonth() === thisMonth).length,
-              savedResources.filter((r: any) => new Date(r.createdAt).getMonth() === lastMonth).length,
-            ),
+            value: savesData.totalSaves || 0,
+            trend: calculateTrend(savesData.todaySaves || 0, savesData.yesterdaySaves || 0),
           },
           totalLikes: {
-            value: totalLikes,
-            trend: calculateTrend(
-              thisMonthResources.reduce((acc: number, r: any) => acc + (r.likes || 0), 0),
-              lastMonthResources.reduce((acc: number, r: any) => acc + (r.likes || 0), 0),
-            ),
+            value: userResources.reduce((acc: number, r: Resource) => acc + (r.likes || 0), 0),
+            trend: calculateTrend(todayLikes, yesterdayLikes),
           },
           monthlyResources: {
-            value: thisMonthResources.length,
-            trend: calculateTrend(thisMonthResources.length, lastMonthResources.length),
+            value: todayResources.length,
+            trend: calculateTrend(todayResources.length, yesterdayResources.length),
           },
         })
 
         setResources(userResources)
+
+        // Fetch chart data
+        const chartDataResponse = await fetch(
+          `/api/resources/chart-data?userId=${session?.user?.id}&range=${selectedRange}`
+        )
+        const chartData = await chartDataResponse.json()
+        setChartData(chartData)
+
       } catch (error) {
         console.error("Error fetching data:", error)
         toast.error("Failed to fetch dashboard data")
       } finally {
-        setTimeout(() => setLoading(false), 300)
+        setLoading(false)
       }
     }
 
     if (session?.user) {
       fetchData()
     }
-  }, [session])
+  }, [session, selectedRange])
 
   // Fetch chart data whenever the selectedRange changes
   useEffect(() => {
@@ -265,6 +283,17 @@ export default function Dashboard() {
   const formatDate = (value: string) => {
     const date = new Date(value)
     return date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+  }
+
+  // Update the calculateTrend function to handle edge cases better
+  const calculateTrend = (current: number, previous: number) => {
+    // If both numbers are 0, there's no trend (0%)
+    if (current === 0 && previous === 0) return 0;
+    // If previous is 0 but current isn't, it's a 100% increase
+    if (previous === 0) return 100;
+    // Calculate percentage change
+    const trend = ((current - previous) / previous) * 100;
+    return Math.round(trend);
   }
 
   return (
@@ -376,112 +405,152 @@ export default function Dashboard() {
       <div>
         <h2 className="text-lg font-semibold text-foreground">Engagement Analytics</h2>
         <p className="text-sm text-muted-foreground">
-          Last {selectedRange === 180 ? "6 Months" : `${selectedRange} Days`} activity
+          Last {selectedRange === 'today' ? 'Today' :
+           selectedRange === '7d' ? 'Last 7 Days' :
+           selectedRange === '30d' ? 'Last 30 Days' :
+           selectedRange === '3m' ? 'Last 3 Months' :
+           selectedRange === '6m' ? 'Last 6 Months' :
+           selectedRange === '1y' ? 'Last Year' : 'Lifetime'} activity
         </p>
       </div>
     </div>
     
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="h-9 pl-3 pr-2.5 gap-2 font-normal">
-          <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">
-            {selectedRange === 180 ? "6 Months" : `${selectedRange} Days`}
+        <Button variant="outline" className="h-9 px-4 gap-2">
+          <CalendarDays className="h-4 w-4" />
+          <span>
+            {selectedRange === 'today' ? 'Today' :
+             selectedRange === '7d' ? 'Last 7 Days' :
+             selectedRange === '30d' ? 'Last 30 Days' :
+             selectedRange === '3m' ? 'Last 3 Months' :
+             selectedRange === '6m' ? 'Last 6 Months' :
+             selectedRange === '1y' ? 'Last Year' : 'Lifetime'}
           </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[200px] p-2">
-        <DropdownMenuItem 
-          onClick={() => setSelectedRange(7)}
-          className="rounded-sm px-3 py-2 text-sm gap-3"
-        >
-          <Timer className="h-4 w-4 text-muted-foreground" />
-          <span>Last 7 Days</span>
-          {selectedRange === 7 && <Check className="h-4 w-4 ml-auto text-primary" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => setSelectedRange(30)}
-          className="rounded-sm px-3 py-2 text-sm gap-3"
-        >
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span>Last 30 Days</span>
-          {selectedRange === 30 && <Check className="h-4 w-4 ml-auto text-primary" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => setSelectedRange(180)}
-          className="rounded-sm px-3 py-2 text-sm gap-3"
-        >
-          <CalendarRange className="h-4 w-4 text-muted-foreground" />
-          <span>Last 6 Months</span>
-          {selectedRange === 180 && <Check className="h-4 w-4 ml-auto text-primary" />}
-        </DropdownMenuItem>
+      <DropdownMenuContent align="end" className="w-[180px]">
+        {[
+          { value: 'today', label: 'Today', icon: Timer },
+          { value: '7d', label: 'Last 7 Days', icon: Calendar },
+          { value: '30d', label: 'Last 30 Days', icon: Calendar },
+          { value: '3m', label: 'Last 3 Months', icon: CalendarRange },
+          { value: '6m', label: 'Last 6 Months', icon: CalendarRange },
+          { value: '1y', label: 'Last Year', icon: CalendarRange },
+          { value: 'all', label: 'Lifetime', icon: CalendarRange },
+        ].map(({ value, label, icon: Icon }) => (
+          <DropdownMenuItem
+            key={value}
+            onClick={() => setSelectedRange(value as TimeRange)}
+            className="gap-2"
+          >
+            <Icon className="h-4 w-4" />
+            <span>{label}</span>
+            {selectedRange === value && <Check className="h-4 w-4 ml-auto" />}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   </div>
 
-  <Card className="p-6 rounded-xl border bg-background shadow-sm">
-    <ChartContainer config={chartConfig} className="w-full h-[360px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-          <defs>
-            <linearGradient id="likesGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-            </linearGradient>
-            <linearGradient id="savesGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
+  <Card className="p-6 rounded-xl border bg-card">
+    <div className="space-y-8">
+      <div className="flex flex-wrap gap-8 items-center justify-center sm:justify-start">
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-blue-500" />
+          <span className="text-sm">Daily Likes</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-emerald-500" />
+          <span className="text-sm">Daily Saves</span>
+        </div>
+      </div>
 
-          <XAxis
-            dataKey="date"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "#64748b", fontSize: 12 }}
-            tickFormatter={formatDate}
-            padding={{ left: 16, right: 16 }}
-          />
+      <div className="h-[300px] sm:h-[400px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="likesGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="savesGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgb(16, 185, 129)" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="rgb(16, 185, 129)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
 
-          <YAxis
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "#64748b", fontSize: 12 }}
-            width={40}
-          />
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              tickFormatter={formatDate}
+              padding={{ left: 20, right: 20 }}
+            />
 
-          <ChartTooltip 
-            content={({ active, payload }) => (
-              <ChartTooltipContent 
-                active={active}
-                payload={payload}
-                className="rounded-lg border bg-background px-3 py-2 shadow-sm"
-                labelClassName="text-sm font-medium text-muted-foreground"
-              />
-            )}
-          />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              tickFormatter={(value) => value.toLocaleString()}
+              width={40}
+            />
 
-          <Area
-            type="monotone"
-            dataKey="likes"
-            stroke="#3b82f6"
-            strokeWidth={2}
-            fillOpacity={1}
-            fill="url(#likesGradient)"
-          />
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (!active || !payload) return null;
+                
+                const date = new Date(payload[0]?.payload?.date);
+                const formattedDate = date.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                });
 
-          <Area
-            type="monotone"
-            dataKey="saves"
-            stroke="#10b981"
-            strokeWidth={2}
-            fillOpacity={1}
-            fill="url(#savesGradient)"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </ChartContainer>
+                return (
+                  <div className="rounded-lg border bg-card px-4 py-3 shadow-md">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      {formattedDate}
+                    </p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-blue-500" />
+                        <span className="text-sm font-medium">{payload[0]?.value}</span>
+                        <span className="text-xs text-muted-foreground">likes</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="text-sm font-medium">{payload[1]?.value}</span>
+                        <span className="text-xs text-muted-foreground">saves</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }}
+            />
+
+            <Area
+              type="monotone"
+              dataKey="likes"
+              stroke="rgb(59, 130, 246)"
+              strokeWidth={2}
+              fill="url(#likesGradient)"
+              dot={false}
+            />
+
+            <Area
+              type="monotone"
+              dataKey="saves"
+              stroke="rgb(16, 185, 129)"
+              strokeWidth={2}
+              fill="url(#savesGradient)"
+              dot={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   </Card>
 </div>
 
@@ -526,6 +595,12 @@ export default function Dashboard() {
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
                 </TableHead>
+                <TableHead className="min-w-[100px]">
+                  <Button variant="ghost" onClick={() => handleSort("saves")} className="p-0 hover:bg-transparent">
+                    Saves
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </TableHead>
                 <TableHead className="min-w-[150px]">
                   <Button variant="ghost" onClick={() => handleSort("createdAt")} className="p-0 hover:bg-transparent">
                     Created At
@@ -552,6 +627,9 @@ export default function Dashboard() {
                         <Skeleton className="h-5 w-10" />
                       </TableCell>
                       <TableCell>
+                        <Skeleton className="h-5 w-10" />
+                      </TableCell>
+                      <TableCell>
                         <Skeleton className="h-5 w-24" />
                       </TableCell>
                       <TableCell>
@@ -573,6 +651,7 @@ export default function Dashboard() {
                         <Badge variant="outline">{resource.type}</Badge>
                       </TableCell>
                       <TableCell>{resource.likes}</TableCell>
+                      <TableCell>{resource.saves}</TableCell>
                       <TableCell>{new Date(resource.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">

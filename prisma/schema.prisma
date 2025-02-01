@@ -72,6 +72,7 @@ model Resource {
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  reactions     ResourceReaction[]
 }
 
 model SavedResource {
@@ -146,9 +147,10 @@ model User {
   interactions   ResourceInteraction[]
   receivedNotifications Notification[] @relation("UserNotifications")
   sentActions           Notification[] @relation("UserActions")
+  reactions     ResourceReaction[]
 
   // Optional for WebAuthn support
-  Authenticator Authenticator[]
+  authenticators Authenticator[]
  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -211,4 +213,18 @@ model Authenticator {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
  
   @@unique([userId, credentialID])
+}
+
+model ResourceReaction {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  emoji      String   
+  userId     String   @db.ObjectId
+  resourceId String   @db.ObjectId
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resourceId, emoji])
+  @@index([resourceId])
+  @@index([userId])
 }

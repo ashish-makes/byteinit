@@ -63,6 +63,8 @@ export default function ManageResourcesListing() {
   // Fetch resources on component mount
   useEffect(() => {
     fetchResources();
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Delete resource

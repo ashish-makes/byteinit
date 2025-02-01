@@ -1,6 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // 2. middleware.ts
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import type { NextRequest } from 'next/server'
+
+export function middleware(request: NextRequest) {
+  return NextResponse.next()
+}
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
@@ -54,5 +60,5 @@ export default auth((req) => {
 
 // Keep your existing config
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
 }

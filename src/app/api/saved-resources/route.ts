@@ -43,7 +43,13 @@ export async function POST(req: NextRequest) {
 
     // Perform transaction
     const transactionResult = await prisma.$transaction(async (prisma) => {
-      // Only create notification if the resource owner is different from the user saving it
+      // Increment the saves counter
+      await prisma.resource.update({
+        where: { id: resourceId },
+        data: { saves: { increment: 1 } }
+      });
+
+      // Create notification if needed
       let notification;
       if (resource.userId !== session.user.id) {
         notification = await prisma.notification.create({
@@ -154,13 +160,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Saved resource not found" }, { status: 404 })
     }
 
-    // Delete the saved resource and optionally remove the associated notification
+    // Delete the saved resource and decrement the saves counter
     await prisma.$transaction([
       prisma.savedResource.deleteMany({
         where: {
           userId: session.user.id,
           resourceId: resourceId,
         },
+      }),
+      prisma.resource.update({
+        where: { id: resourceId },
+        data: { saves: { decrement: 1 } }
       }),
       // Remove the save notification if it exists
       prisma.notification.deleteMany({

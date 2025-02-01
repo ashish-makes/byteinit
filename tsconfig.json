@@ -13,7 +13,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": ["next-auth", "node", "bcrypt"],
+    "types": ["next-auth", "node", "bcrypt", "jest"],
     "typeRoots": ["./types", "./node_modules/@types"],
     "plugins": [
       {
