@@ -34,6 +34,10 @@ import {
   Activity,
   FolderOpenDot,
   Folder,
+  Link2,
+  Copy,
+  ExternalLink,
+  X,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
@@ -49,6 +53,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Card } from "@/components/ui/card"
+import { motion, AnimatePresence } from "framer-motion"
 
 // Import Recharts components for AreaChart
 import {
@@ -98,6 +103,17 @@ type ChartData = {
   saves: number
 }[]
 
+// Add these URL helper functions (same as profile page)
+const getDisplayUrl = (user: any) => {
+  const identifier = user?.username || user?.email?.split('@')[0] || '';
+  return `${window.location.origin}/${identifier}`;
+};
+
+const getNavigationUrl = (user: any) => {
+  const identifier = user?.username || user?.email?.split('@')[0] || '';
+  return `/${identifier}`;
+};
+
 export default function Dashboard() {
   const { data: session } = useSession()
   const router = useRouter()
@@ -113,6 +129,8 @@ export default function Dashboard() {
   const [sorting, setSorting] = useState<"asc" | "desc" | null>(null)
   const [resourceToDelete, setResourceToDelete] = useState<string | null>(null)
   const [chartData, setChartData] = useState<ChartData>([])
+  const [showProfileLink, setShowProfileLink] = useState(true);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Define chart configuration for shadcn UI
   const chartConfig = {
@@ -236,6 +254,18 @@ export default function Dashboard() {
     }
   }, [session, selectedRange])
 
+  useEffect(() => {
+    // Check if user has dismissed the profile link card before
+    const hasSeenProfileLink = localStorage.getItem('hasSeenProfileLink');
+    setShowProfileLink(!hasSeenProfileLink);
+  }, []);
+
+  const dismissProfileLink = () => {
+    localStorage.setItem('hasSeenProfileLink', 'true');
+    setShowProfileLink(false);
+    toast.success("Profile link moved to header and profile page");
+  };
+
   const handleSort = (column: keyof Resource) => {
     const newSorting = sorting === "asc" ? "desc" : "asc"
     setSorting(newSorting)
@@ -297,21 +327,162 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-7xl mx-auto space-y-6"
+    >
+      {/* Header Section with animation */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="flex flex-col sm:flex-row items-center justify-between gap-4"
+      >
         <div className="text-center sm:text-left">
           <h1 className="text-2xl font-semibold text-foreground/90">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
             Welcome back, {session?.user?.name || "User"}
           </p>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Your Resources Card */}
-        <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background/80 backdrop-blur-sm transition-all duration-300 hover:shadow-sm">
+      {/* Animated Profile Link Section */}
+      <AnimatePresence mode="wait">
+        {showProfileLink && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ 
+              opacity: 1, 
+              height: "auto",
+              transition: {
+                height: {
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 30
+                },
+                opacity: {
+                  duration: 0.2
+                }
+              }
+            }}
+            exit={{ 
+              opacity: 0,
+              height: 0,
+              transition: {
+                height: {
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 30
+                },
+                opacity: {
+                  duration: 0.15
+                }
+              }
+            }}
+            className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg border border-border bg-background/80 backdrop-blur-sm overflow-hidden"
+          >
+            {/* Close button - Mobile only */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={dismissProfileLink}
+              className="absolute sm:hidden right-2 top-2 h-6 w-6 rounded-full shrink-0"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+
+            <div className="flex items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
+              <div className="p-2 rounded-md bg-primary/10 shrink-0">
+                <Link2 className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-medium text-sm text-foreground/90 flex items-center gap-2">
+                  Your Profile is Ready! 
+                  <span className="hidden xs:inline">🎉</span>
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="px-2 py-0.5 text-xs rounded bg-muted truncate">
+                    {getDisplayUrl(session?.user)}
+                  </code>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-1 sm:gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 sm:w-auto sm:px-3 relative"
+                onClick={() => {
+                  navigator.clipboard.writeText(getDisplayUrl(session?.user));
+                  setCopySuccess(true);
+                  setTimeout(() => setCopySuccess(false), 2000);
+                }}
+              >
+                {copySuccess ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                  >
+                    <Check className="h-3 w-3" />
+                  </motion.div>
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+                <span className="hidden sm:inline-block sm:ml-1 text-xs">
+                  {copySuccess ? 'Copied!' : 'Copy'}
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 sm:w-auto sm:px-3"
+                asChild
+              >
+                <Link href={getNavigationUrl(session?.user)}>
+                  <ExternalLink className="h-3 w-3" />
+                  <span className="hidden sm:inline-block sm:ml-1 text-xs">View</span>
+                </Link>
+              </Button>
+              {/* Close button - Desktop only */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={dismissProfileLink}
+                className="hidden sm:flex h-8 w-8 rounded-full shrink-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Stats Grid with staggered animation */}
+      <motion.div 
+        initial="hidden"
+        animate="show"
+        variants={{
+          hidden: { opacity: 0 },
+          show: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.1
+            }
+          }
+        }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        {/* Animate each stat card */}
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            show: { opacity: 1, y: 0 }
+          }}
+          className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background/80 backdrop-blur-sm transition-all duration-300 hover:shadow-sm"
+        >
           <div className="p-2 rounded-md bg-primary/10">
             <FileText className="h-5 w-5 text-primary" />
           </div>
@@ -329,10 +500,15 @@ export default function Dashboard() {
             </div>
             <p className="text-sm text-muted-foreground">Your Resources</p>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Saved Resources Card */}
-        <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background/80 backdrop-blur-sm transition-all duration-300 hover:shadow-sm">
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            show: { opacity: 1, y: 0 }
+          }}
+          className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background/80 backdrop-blur-sm transition-all duration-300 hover:shadow-sm"
+        >
           <div className="p-2 rounded-md bg-primary/10">
             <Bookmark className="h-5 w-5 text-primary" />
           </div>
@@ -350,10 +526,15 @@ export default function Dashboard() {
             </div>
             <p className="text-sm text-muted-foreground">Saved Resources</p>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Likes on Your Resources Card */}
-        <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background/80 backdrop-blur-sm transition-all duration-300 hover:shadow-sm">
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            show: { opacity: 1, y: 0 }
+          }}
+          className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background/80 backdrop-blur-sm transition-all duration-300 hover:shadow-sm"
+        >
           <div className="p-2 rounded-md bg-primary/10">
             <Heart className="h-5 w-5 text-primary" />
           </div>
@@ -371,10 +552,15 @@ export default function Dashboard() {
             </div>
             <p className="text-sm text-muted-foreground">Likes on Your Resources</p>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Resources This Month Card */}
-        <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background/80 backdrop-blur-sm transition-all duration-300 hover:shadow-sm">
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            show: { opacity: 1, y: 0 }
+          }}
+          className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background/80 backdrop-blur-sm transition-all duration-300 hover:shadow-sm"
+        >
           <div className="p-2 rounded-md bg-primary/10">
             <Calendar className="h-5 w-5 text-primary" />
           </div>
@@ -392,306 +578,327 @@ export default function Dashboard() {
             </div>
             <p className="text-sm text-muted-foreground">Resources This Month</p>
           </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Chart Section with fade-in animation */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="space-y-4"
+      >
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Activity className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Engagement Analytics</h2>
+              <p className="text-sm text-muted-foreground">
+                Last {selectedRange === 'today' ? 'Today' :
+                 selectedRange === '7d' ? 'Last 7 Days' :
+                 selectedRange === '30d' ? 'Last 30 Days' :
+                 selectedRange === '3m' ? 'Last 3 Months' :
+                 selectedRange === '6m' ? 'Last 6 Months' :
+                 selectedRange === '1y' ? 'Last Year' : 'Lifetime'} activity
+              </p>
+            </div>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-9 px-4 gap-2">
+                <CalendarDays className="h-4 w-4" />
+                <span>
+                  {selectedRange === 'today' ? 'Today' :
+                   selectedRange === '7d' ? 'Last 7 Days' :
+                   selectedRange === '30d' ? 'Last 30 Days' :
+                   selectedRange === '3m' ? 'Last 3 Months' :
+                   selectedRange === '6m' ? 'Last 6 Months' :
+                   selectedRange === '1y' ? 'Last Year' : 'Lifetime'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[180px]">
+              {[
+                { value: 'today', label: 'Today', icon: Timer },
+                { value: '7d', label: 'Last 7 Days', icon: Calendar },
+                { value: '30d', label: 'Last 30 Days', icon: Calendar },
+                { value: '3m', label: 'Last 3 Months', icon: CalendarRange },
+                { value: '6m', label: 'Last 6 Months', icon: CalendarRange },
+                { value: '1y', label: 'Last Year', icon: CalendarRange },
+                { value: 'all', label: 'Lifetime', icon: CalendarRange },
+              ].map(({ value, label, icon: Icon }) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={() => setSelectedRange(value as TimeRange)}
+                  className="gap-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{label}</span>
+                  {selectedRange === value && <Check className="h-4 w-4 ml-auto" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </div>
 
-{/* Chart Section */}
-<div className="space-y-4">
-  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-    <div className="flex items-center gap-3">
-      <div className="p-2 rounded-lg bg-primary/10">
-        <Activity className="h-5 w-5 text-primary" />
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Engagement Analytics</h2>
-        <p className="text-sm text-muted-foreground">
-          Last {selectedRange === 'today' ? 'Today' :
-           selectedRange === '7d' ? 'Last 7 Days' :
-           selectedRange === '30d' ? 'Last 30 Days' :
-           selectedRange === '3m' ? 'Last 3 Months' :
-           selectedRange === '6m' ? 'Last 6 Months' :
-           selectedRange === '1y' ? 'Last Year' : 'Lifetime'} activity
-        </p>
-      </div>
-    </div>
-    
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="h-9 px-4 gap-2">
-          <CalendarDays className="h-4 w-4" />
-          <span>
-            {selectedRange === 'today' ? 'Today' :
-             selectedRange === '7d' ? 'Last 7 Days' :
-             selectedRange === '30d' ? 'Last 30 Days' :
-             selectedRange === '3m' ? 'Last 3 Months' :
-             selectedRange === '6m' ? 'Last 6 Months' :
-             selectedRange === '1y' ? 'Last Year' : 'Lifetime'}
-          </span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[180px]">
-        {[
-          { value: 'today', label: 'Today', icon: Timer },
-          { value: '7d', label: 'Last 7 Days', icon: Calendar },
-          { value: '30d', label: 'Last 30 Days', icon: Calendar },
-          { value: '3m', label: 'Last 3 Months', icon: CalendarRange },
-          { value: '6m', label: 'Last 6 Months', icon: CalendarRange },
-          { value: '1y', label: 'Last Year', icon: CalendarRange },
-          { value: 'all', label: 'Lifetime', icon: CalendarRange },
-        ].map(({ value, label, icon: Icon }) => (
-          <DropdownMenuItem
-            key={value}
-            onClick={() => setSelectedRange(value as TimeRange)}
-            className="gap-2"
-          >
-            <Icon className="h-4 w-4" />
-            <span>{label}</span>
-            {selectedRange === value && <Check className="h-4 w-4 ml-auto" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  </div>
+        <Card className="p-6 rounded-xl border bg-card">
+          <div className="space-y-8">
+            <div className="flex flex-wrap gap-8 items-center justify-center sm:justify-start">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-blue-500" />
+                <span className="text-sm">Daily Likes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                <span className="text-sm">Daily Saves</span>
+              </div>
+            </div>
 
-  <Card className="p-6 rounded-xl border bg-card">
-    <div className="space-y-8">
-      <div className="flex flex-wrap gap-8 items-center justify-center sm:justify-start">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-blue-500" />
-          <span className="text-sm">Daily Likes</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-emerald-500" />
-          <span className="text-sm">Daily Saves</span>
-        </div>
-      </div>
+            <div className="h-[300px] sm:h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="likesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="savesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgb(16, 185, 129)" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="rgb(16, 185, 129)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
 
-      <div className="h-[300px] sm:h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="likesGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="savesGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgb(16, 185, 129)" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="rgb(16, 185, 129)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    tickFormatter={formatDate}
+                    padding={{ left: 20, right: 20 }}
+                  />
 
-            <XAxis
-              dataKey="date"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-              tickFormatter={formatDate}
-              padding={{ left: 20, right: 20 }}
-            />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    tickFormatter={(value) => value.toLocaleString()}
+                    width={40}
+                  />
 
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-              tickFormatter={(value) => value.toLocaleString()}
-              width={40}
-            />
+                  <ChartTooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload) return null;
+                      
+                      const date = new Date(payload[0]?.payload?.date);
+                      const formattedDate = date.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      });
 
-            <ChartTooltip
-              content={({ active, payload }) => {
-                if (!active || !payload) return null;
-                
-                const date = new Date(payload[0]?.payload?.date);
-                const formattedDate = date.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                });
-
-                return (
-                  <div className="rounded-lg border bg-card px-4 py-3 shadow-md">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      {formattedDate}
-                    </p>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                        <span className="text-sm font-medium">{payload[0]?.value}</span>
-                        <span className="text-xs text-muted-foreground">likes</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-sm font-medium">{payload[1]?.value}</span>
-                        <span className="text-xs text-muted-foreground">saves</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }}
-            />
-
-            <Area
-              type="monotone"
-              dataKey="likes"
-              stroke="rgb(59, 130, 246)"
-              strokeWidth={2}
-              fill="url(#likesGradient)"
-              dot={false}
-            />
-
-            <Area
-              type="monotone"
-              dataKey="saves"
-              stroke="rgb(16, 185, 129)"
-              strokeWidth={2}
-              fill="url(#savesGradient)"
-              dot={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  </Card>
-</div>
-
-      {/* Resource Table */}
-      <div className="space-y-4">
-      <div className="flex items-center gap-3">
-  <div className="p-2 rounded-lg bg-primary/10">
-    <FolderOpenDot className="h-5 w-5 text-primary" />
-  </div>
-  <div>
-    <h2 className="text-lg font-semibold text-foreground">Your Resources</h2>
-    <p className="text-sm text-muted-foreground">
-      {resources.length} resources • Sorted by {sorting || 'recent'}
-    </p>
-  </div>
-</div>
-        <div className="overflow-x-auto">
-          <Table className="min-w-full rounded-lg border border-border bg-background/80 backdrop-blur-sm">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[150px]">
-                  <Button variant="ghost" onClick={() => handleSort("title")} className="p-0 hover:bg-transparent">
-                    Title
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-[120px]">
-                  <Button variant="ghost" onClick={() => handleSort("category")} className="p-0 hover:bg-transparent">
-                    Category
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-[120px]">
-                  <Button variant="ghost" onClick={() => handleSort("type")} className="p-0 hover:bg-transparent">
-                    Type
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-[100px]">
-                  <Button variant="ghost" onClick={() => handleSort("likes")} className="p-0 hover:bg-transparent">
-                    Likes
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-[100px]">
-                  <Button variant="ghost" onClick={() => handleSort("saves")} className="p-0 hover:bg-transparent">
-                    Saves
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-[150px]">
-                  <Button variant="ghost" onClick={() => handleSort("createdAt")} className="p-0 hover:bg-transparent">
-                    Created At
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-[150px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading
-                ? Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={`skeleton-${index}`}>
-                      <TableCell>
-                        <Skeleton className="h-5 w-full" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-20" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-20" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-10" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-10" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-8 w-20" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                : resources.map((resource) => (
-                    <TableRow key={resource.id} className="hover:bg-accent/5">
-                      <TableCell>
-                        <Link href={`/dashboard/resources/${resource.id}`} className="font-medium hover:underline">
-                          {resource.title}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{resource.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{resource.type}</Badge>
-                      </TableCell>
-                      <TableCell>{resource.likes}</TableCell>
-                      <TableCell>{resource.saves}</TableCell>
-                      <TableCell>{new Date(resource.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(resource.id)}>
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDelete(resource.id)}
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete your resource and remove it from our servers.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                      return (
+                        <div className="rounded-lg border bg-card px-4 py-3 shadow-md">
+                          <p className="text-sm font-medium text-muted-foreground mb-2">
+                            {formattedDate}
+                          </p>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-blue-500" />
+                              <span className="text-sm font-medium">{payload[0]?.value}</span>
+                              <span className="text-xs text-muted-foreground">likes</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                              <span className="text-sm font-medium">{payload[1]?.value}</span>
+                              <span className="text-xs text-muted-foreground">saves</span>
+                            </div>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-            </TableBody>
-          </Table>
+                      );
+                    }}
+                  />
+
+                  <Area
+                    type="monotone"
+                    dataKey="likes"
+                    stroke="rgb(59, 130, 246)"
+                    strokeWidth={2}
+                    fill="url(#likesGradient)"
+                    dot={false}
+                  />
+
+                  <Area
+                    type="monotone"
+                    dataKey="saves"
+                    stroke="rgb(16, 185, 129)"
+                    strokeWidth={2}
+                    fill="url(#savesGradient)"
+                    dot={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Resource Table with fade-in and slide-up animation */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="space-y-4"
+      >
+        <div className="flex items-center gap-3">
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="p-2 rounded-lg bg-primary/10"
+          >
+            <FolderOpenDot className="h-5 w-5 text-primary" />
+          </motion.div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Your Resources</h2>
+            <p className="text-sm text-muted-foreground">
+              {resources.length} resources • Sorted by {sorting || 'recent'}
+            </p>
+          </div>
         </div>
-      </div>
-    </div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="overflow-x-auto"
+        >
+          <div className="overflow-x-auto">
+            <Table className="min-w-full rounded-lg border border-border bg-background/80 backdrop-blur-sm">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[150px]">
+                    <Button variant="ghost" onClick={() => handleSort("title")} className="p-0 hover:bg-transparent">
+                      Title
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="min-w-[120px]">
+                    <Button variant="ghost" onClick={() => handleSort("category")} className="p-0 hover:bg-transparent">
+                      Category
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="min-w-[120px]">
+                    <Button variant="ghost" onClick={() => handleSort("type")} className="p-0 hover:bg-transparent">
+                      Type
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="min-w-[100px]">
+                    <Button variant="ghost" onClick={() => handleSort("likes")} className="p-0 hover:bg-transparent">
+                      Likes
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="min-w-[100px]">
+                    <Button variant="ghost" onClick={() => handleSort("saves")} className="p-0 hover:bg-transparent">
+                      Saves
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="min-w-[150px]">
+                    <Button variant="ghost" onClick={() => handleSort("createdAt")} className="p-0 hover:bg-transparent">
+                      Created At
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="min-w-[150px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading
+                  ? Array.from({ length: 5 }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        <TableCell>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-10" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-10" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-8 w-20" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : resources.map((resource) => (
+                      <TableRow key={resource.id} className="hover:bg-accent/5">
+                        <TableCell>
+                          <Link href={`/dashboard/resources/${resource.id}`} className="font-medium hover:underline">
+                            {resource.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{resource.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{resource.type}</Badge>
+                        </TableCell>
+                        <TableCell>{resource.likes}</TableCell>
+                        <TableCell>{resource.saves}</TableCell>
+                        <TableCell>{new Date(resource.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(resource.id)}>
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(resource.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete your resource and remove it from our servers.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+              </TableBody>
+            </Table>
+          </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   )
 }

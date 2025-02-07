@@ -1,6 +1,6 @@
 import React from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
-import { Menu, Plus, Library, User, BookMarked, BarChart } from 'lucide-react';
+import { Menu, Plus, Library, User, BookMarked, BarChart, Link2, Settings } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +18,11 @@ import { NotificationsDropdown } from '@/components/ui/Notification';
 
 const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const { data: session, status } = useSession();
+
+  const getProfileUrl = () => {
+    const identifier = session?.user?.username || session?.user?.email?.split('@')[0] || '';
+    return `/${identifier}`;
+  };
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -112,8 +117,14 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
                 <DropdownMenuSeparator />
                 <Link href="/dashboard/profile">
                   <DropdownMenuItem className="gap-2">
-                    <User className="h-4 w-4" />
-                    Profile
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                </Link>
+                <Link href={getProfileUrl()}>
+                  <DropdownMenuItem className="gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Public Profile
                   </DropdownMenuItem>
                 </Link>
                 <DropdownMenuItem className="gap-2">

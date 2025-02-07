@@ -206,6 +206,16 @@ const getCodeSnippet = (techStack: string, skills: string[]) => {
   };
 };
 
+const getTechStackArray = (techStack: unknown): string[] => {
+  if (typeof techStack === 'string') {
+    return techStack.split(',');
+  }
+  if (Array.isArray(techStack)) {
+    return techStack;
+  }
+  return [];
+};
+
 const FloatingHeader = ({ profile }: { profile: ProfileData }) => {
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 50], [0, 1]);
@@ -375,7 +385,7 @@ const NarrativePortfolio = () => {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
         <LoadingState />
-      </div>
+        </div>
     );
   }
 
@@ -444,14 +454,14 @@ const NarrativePortfolio = () => {
                   {/* console.log("Welcome to my digital space! 👋") */}
                 </div>
                 <p className="bg-muted/30 p-4 rounded-lg backdrop-blur-sm">
-                  {isGenerating ? (
+            {isGenerating ? (
                     <TextShimmer className="font-mono text-sm" duration={2}>
                       Regenerating bio...
                     </TextShimmer>
-                  ) : (
+            ) : (
                     profile.bio
-                  )}
-                </p>
+            )}
+          </p>
                 {profile.techStack && (
                   <div className="font-mono text-xs rounded-lg bg-[#1e1e1e] p-3 border border-zinc-800 shadow-xl overflow-hidden">
                     <div className="flex items-center gap-3 text-muted-foreground/60 mb-2 pb-2 border-b border-zinc-800">
@@ -461,7 +471,11 @@ const NarrativePortfolio = () => {
                         <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
                       </div>
                       {(() => {
-                        const { filename } = getCodeSnippet(profile.techStack!, profile.techStack!.split(','));
+                        const techStackArray = getTechStackArray(profile.techStack);
+                        const { filename } = getCodeSnippet(
+                          typeof profile.techStack === 'string' ? profile.techStack : '',
+                          techStackArray
+                        );
                         return (
                           <span className="text-[10px] opacity-70">{filename}</span>
                         );
@@ -469,7 +483,11 @@ const NarrativePortfolio = () => {
                     </div>
                     <div className="space-y-0.5 font-mono text-[12px] leading-5">
                       {(() => {
-                        const { code } = getCodeSnippet(profile.techStack!, profile.techStack!.split(','));
+                        const techStackArray = getTechStackArray(profile.techStack);
+                        const { code } = getCodeSnippet(
+                          typeof profile.techStack === 'string' ? profile.techStack : '',
+                          techStackArray
+                        );
                         return code.map((line, index) => (
                           <div key={index} className="flex">
                             <span className="w-6 text-zinc-600 text-right pr-2 select-none text-[10px]">{index + 1}</span>
@@ -537,17 +555,17 @@ const NarrativePortfolio = () => {
                     </div>
                   </a>
                 ))}
-              </div>
+        </div>
             </motion.div>
           )}
 
           {(profile.github || profile.website || profile.twitter || profile.email) && (
             <motion.div variants={fadeIn} className="flex flex-wrap gap-3 mb-8">
-              {profile.github && (
-                <a 
-                  href={`https://github.com/${profile.github}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+          {profile.github && (
+            <a 
+              href={`https://github.com/${profile.github}`}
+              target="_blank"
+              rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Github className="h-3.5 w-3.5" />
@@ -576,33 +594,33 @@ const NarrativePortfolio = () => {
                 >
                   <Twitter className="h-3.5 w-3.5" />
                   <span>Twitter</span>
-                </a>
-              )}
-
+            </a>
+          )}
+          
               {profile.email && (
-                <a 
-                  href={`mailto:${profile.email}`}
+          <a 
+            href={`mailto:${profile.email}`}
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
+          >
                   <Mail className="h-3.5 w-3.5" />
                   <span>Email</span>
-                </a>
+          </a>
               )}
             </motion.div>
           )}
 
           {isOwner && (
             <motion.div variants={fadeIn}>
-              <Button
+          <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleRegenerate}
-                disabled={isGenerating}
+            onClick={handleRegenerate}
+            disabled={isGenerating}
                 className="text-xs text-muted-foreground hover:text-foreground"
-              >
+          >
                 <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isGenerating ? 'animate-spin' : ''}`} />
-                {isGenerating ? 'Generating...' : 'Regenerate Bio'}
-              </Button>
+            {isGenerating ? 'Generating...' : 'Regenerate Bio'}
+          </Button>
             </motion.div>
           )}
         </div>

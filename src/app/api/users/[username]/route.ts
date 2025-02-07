@@ -7,10 +7,16 @@ export async function GET(
 ) {
   try {
     const { username } = await params;
+    
+    console.log('Searching for user with:', username);
 
-    const user = await prisma.user.findUnique({
+    // First try exact match
+    let user = await prisma.user.findFirst({
       where: {
-        email: username,
+        OR: [
+          { username: username },
+          { email: username }
+        ]
       },
       include: {
         resources: {
@@ -20,6 +26,37 @@ export async function GET(
         },
       },
     });
+
+    // If no exact match found, try fuzzy match
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            {
+              username: {
+                contains: username,
+                mode: 'insensitive'
+              }
+            },
+            {
+              email: {
+                equals: username,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        },
+        include: {
+          resources: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+        },
+      });
+    }
+
+    console.log('Found user:', user?.username);
 
     if (!user) {
       return new NextResponse("User not found", { status: 404 });

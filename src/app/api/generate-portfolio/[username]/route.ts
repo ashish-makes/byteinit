@@ -9,15 +9,26 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const session = await auth();
-    // Wait for params promise to resolve
     const { username } = await params;
+    
+    // Create normalized version by removing special characters and spaces
+    const normalizedSearch = username.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    
+    console.log('Searching for user with:', {
+      originalUsername: username,
+      normalizedUsername: normalizedSearch
+    });
 
-    // Fetch requested user details from the database
-    const userDetails = await prisma.user.findFirst({
+    // First try exact match
+    let userDetails = await prisma.user.findFirst({
       where: {
-        OR: [{ username }, { email: username }],
+        OR: [
+          { username: username },
+          { email: username }
+        ]
       },
       select: {
+        username: true,
         id: true,
         name: true,
         email: true,
@@ -45,6 +56,58 @@ export async function GET(
         },
       },
     });
+
+    // If no exact match found, try fuzzy match
+    if (!userDetails) {
+      userDetails = await prisma.user.findFirst({
+        where: {
+          OR: [
+            {
+              username: {
+                contains: normalizedSearch,
+                mode: 'insensitive'
+              }
+            },
+            {
+              email: {
+                startsWith: normalizedSearch,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        },
+        select: {
+          username: true,
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          bio: true,
+          location: true,
+          website: true,
+          github: true,
+          twitter: true,
+          techStack: true,
+          yearsOfExperience: true,
+          currentRole: true,
+          company: true,
+          lookingForWork: true,
+          resources: {
+            select: {
+              title: true,
+              url: true,
+              type: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
+        },
+      });
+    }
+
+    console.log('Found user:', userDetails?.username);
 
     if (!userDetails) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

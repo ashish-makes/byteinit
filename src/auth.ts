@@ -21,9 +21,8 @@ export const {
       // Remove the id field from the user data
       const { id, ...userData } = user
 
-      // For OAuth users, generate username from email
-      // For credential users, use their name as username
-      let username = userData.name || userData.email?.split('@')[0] || ''
+      // Always generate username from email for consistency
+      let username = userData.email?.split('@')[0] || ''
       let counter = 1
 
       // Keep trying until we find a unique username

@@ -36,6 +36,9 @@ import {
   Plus,
   X,
   ExternalLink,
+  Link2,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { z } from 'zod';
 import {
@@ -47,6 +50,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 // Add this after the imports
 const EXPERIENCE_LEVELS = [
@@ -74,6 +79,7 @@ const profileSchema = z.object({
   company: z.string().max(100).optional().nullable(),
   lookingForWork: z.boolean().default(false),
   image: z.string().nullable().optional(),
+  username: z.string().max(50).optional().nullable(),
 });
 
 type ProfileData = z.infer<typeof profileSchema>;
@@ -93,6 +99,7 @@ const defaultProfile: ProfileData = {
   currentRole: '',
   company: '',
   lookingForWork: false,
+  username: '',
 };
 
 // Components
@@ -236,12 +243,28 @@ interface ViewModeProps {
   profileData: ProfileData;
   setIsEditing: (value: boolean) => void;
   isLoading: boolean;
+  copySuccess: boolean;
+  setCopySuccess: (value: boolean) => void;
 }
+
+const getDisplayUrl = (profileData: ProfileData) => {
+  // For display, show the clean URL without any prefix
+  const identifier = profileData.username || profileData.email?.split('@')[0] || '';
+  return `${window.location.origin}/${identifier}`;
+};
+
+const getNavigationUrl = (profileData: ProfileData) => {
+  // For navigation, use the same direct path
+  const identifier = profileData.username || profileData.email?.split('@')[0] || '';
+  return `/${identifier}`;
+};
 
 const ViewMode = ({
   profileData,
   setIsEditing,
   isLoading,
+  copySuccess,
+  setCopySuccess,
 }: ViewModeProps) => (
   <div className="space-y-6">
     <div className="flex items-start justify-between">
@@ -321,6 +344,69 @@ const ViewMode = ({
         Edit Profile
       </Button>
     </div>
+
+    {/* Profile Link Card - Similar to Dashboard */}
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg border border-border bg-background/80 backdrop-blur-sm overflow-hidden"
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
+        <div className="p-2 rounded-md bg-primary/10 shrink-0">
+          <Link2 className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <h3 className="font-medium text-sm text-foreground/90 flex items-center gap-2">
+            Share Your Profile
+            <span className="hidden xs:inline">✨</span>
+          </h3>
+          <div className="flex items-center gap-2 mt-1">
+            <code className="px-2 py-0.5 text-xs rounded bg-muted truncate">
+              {getDisplayUrl(profileData)}
+            </code>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex gap-1 sm:gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 sm:w-auto sm:px-3 relative"
+          onClick={() => {
+            navigator.clipboard.writeText(getDisplayUrl(profileData));
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+          }}
+        >
+          {copySuccess ? (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+            >
+              <Check className="h-3 w-3" />
+            </motion.div>
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
+          <span className="hidden sm:inline-block sm:ml-1 text-xs">
+            {copySuccess ? 'Copied!' : 'Copy'}
+          </span>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 sm:w-auto sm:px-3"
+          asChild
+        >
+          <Link href={getNavigationUrl(profileData)}>
+            <ExternalLink className="h-3 w-3" />
+            <span className="hidden sm:inline-block sm:ml-1 text-xs">View</span>
+          </Link>
+        </Button>
+      </div>
+    </motion.div>
 
     <div className="grid gap-6">
       <div className="space-y-1">
@@ -704,6 +790,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData>(defaultProfile);
+  const [showProfileLink, setShowProfileLink] = useState(true);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -778,6 +866,8 @@ export default function ProfilePage() {
             profileData={profileData}
             setIsEditing={setIsEditing}
             isLoading={isLoading}
+            copySuccess={copySuccess}
+            setCopySuccess={setCopySuccess}
           />
         )}
       </CardContent>
