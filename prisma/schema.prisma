@@ -120,6 +120,7 @@ model User {
   id            String          @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
   email         String?         @unique
+  username      String?         @unique
   emailVerified DateTime?
   image         String?
   accounts      Account[]
@@ -127,16 +128,16 @@ model User {
   role          UserRole?        @default(USER)
 
   // Add new profile fields
-  bio              String?
-  location         String?
-  website          String?
-  github           String?
-  twitter          String?
-  techStack        String?
+  bio             String?
+  location        String?
+  website         String?
+  github          String?
+  twitter         String?
+  techStack       String?
   yearsOfExperience String?
-  currentRole       String?
-  company          String?
-  lookingForWork    Boolean? @default(false)
+  currentRole     String?
+  company         String?
+  lookingForWork  Boolean   @default(false)
 
   password      String?
   resetToken        String?

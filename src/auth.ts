@@ -1,88 +1,124 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import NextAuth, { DefaultSession, type User as NextAuthUser, type Session } from "next-auth"
-import type { JWT } from "next-auth/jwt"
+import NextAuth from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
+import type { Adapter } from "next-auth/adapters"
 import { prisma } from "@/prisma"
 import Google from "next-auth/providers/google"
-import Discord from "next-auth/providers/discord"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
-import { User } from "@prisma/client"
+import { UserRole } from "@prisma/client"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
+  adapter: {
+    ...PrismaAdapter(prisma),
+    createUser: async (user: any) => {
+      // Remove the id field from the user data
+      const { id, ...userData } = user
+
+      // For OAuth users, generate username from email
+      // For credential users, use their name as username
+      let username = userData.name || userData.email?.split('@')[0] || ''
+      let counter = 1
+
+      // Keep trying until we find a unique username
+      while (true) {
+        const exists = await prisma.user.findUnique({
+          where: { username }
+        })
+        if (!exists) break
+        username = `${username}${counter}`
+        counter++
+      }
+
+      // Create user with generated username
+      return prisma.user.create({
+        data: {
+          ...userData,
+          username,
+          role: UserRole.USER
+        }
+      })
+    }
+  } as Adapter,
   pages: {
     signIn: "/auth/login",
     newUser: "/auth/register",
   },
   providers: [
     Google({
-      clientId: process.env.GOOGLE_AUTH_ID,
-      clientSecret: process.env.GOOGLE_AUTH_SECRET,
-    }),
-    Discord({
-      clientId: process.env.DISCORD_AUTH_ID,
-      clientSecret: process.env.DISCORD_AUTH_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
     Credentials({
-      name: "credentials",
-      credentials: {
-        emailOrUsername: { label: "Email or Username", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials, req): Promise<NextAuthUser | null> {
-        if (!credentials?.emailOrUsername || !credentials?.password) {
-          throw new Error("Invalid credentials")
+      async authorize(credentials) {
+        if (!credentials || !credentials.emailOrUsername || !credentials.password) {
+          return null
         }
 
         const user = await prisma.user.findFirst({
           where: {
-            OR: [{ email: credentials.emailOrUsername }, { name: credentials.emailOrUsername }],
+            OR: [
+              { email: credentials.emailOrUsername as string },
+              { username: credentials.emailOrUsername as string }
+            ],
           },
         })
 
-        if (!user || !user.password) {
-          throw new Error("User not found")
-        }
-
-        if (typeof credentials?.password !== "string") {
-          throw new Error("Invalid password format")
-        }
-
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-
-        if (!isPasswordValid) {
-          throw new Error("Invalid password")
-        }
+        if (!user?.password) return null
+        
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password as string, 
+          user.password
+        )
+        if (!isPasswordValid) return null
 
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           image: user.image,
-          role: user.role || undefined,
+          role: user.role || "USER",
+          username: user.username || ""
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id || ""
-        token.role = user.role
-        token.image = user.image // Add this line
-      }
-      return token
-    },
-    async session({ session, token }: { session: Session; token: JWT }) {
+    async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id
-        session.user.role = token.role
-        session.user.image = token.image as string | null | undefined // Add this line
+        session.user.id = token.id as string
+        session.user.role = token.role as UserRole
+        session.user.username = token.username as string
       }
       return session
     },
+    async jwt({ token, user, trigger, session }) {
+      if (user) {
+        token.id = user.id
+        token.role = user.role
+        token.username = user.username
+      }
+
+      if (trigger === "update" && session) {
+        token.name = session.user.name
+        token.email = session.user.email
+        token.picture = session.user.image
+      }
+
+      return token
+    }
   },
+  session: { strategy: "jwt" },
 })
+
+// For middleware usage
+export const config = {
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+}
 
