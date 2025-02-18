@@ -17,13 +17,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     .join(" "); // Join with spaces
 
   return (
-    <div className="pt-24">
+    <div className="pt-20">
       <ResourceListPage
         initialFilter={{
-          type: "ALL",
           category: category.toUpperCase(),
         }}
-        hideCategoryFilter={true} // Hide Type and Category filters
+        hideFilters={true}  // Hide all filter dropdowns
         headerTitle={formattedCategory} // Display the formatted category name
       />
     </div>

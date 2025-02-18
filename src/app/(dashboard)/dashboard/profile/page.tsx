@@ -250,13 +250,13 @@ interface ViewModeProps {
 const getDisplayUrl = (profileData: ProfileData) => {
   // For display, show the clean URL without any prefix
   const identifier = profileData.username || profileData.email?.split('@')[0] || '';
-  return `${window.location.origin}/${identifier}`;
+  return `${window.location.origin}/u/${identifier}`;
 };
 
 const getNavigationUrl = (profileData: ProfileData) => {
   // For navigation, use the same direct path
   const identifier = profileData.username || profileData.email?.split('@')[0] || '';
-  return `/${identifier}`;
+  return `/u/${identifier}`;
 };
 
 const ViewMode = ({

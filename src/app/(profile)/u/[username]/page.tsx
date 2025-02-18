@@ -11,6 +11,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TextShimmer } from '@/components/core/text-shimmer';
+import Link from 'next/link';
 
 interface ProfileData {
   name: string;
@@ -48,8 +49,7 @@ const stagger = {
   }
 };
 
-const LoadingState = () => {
-  const [currentStep, setCurrentStep] = useState(0);
+const LoadingState = ({ currentStep }: { currentStep: number }) => {
   const steps = [
     "Gathering profile data...",
     "Analyzing with AI...",
@@ -57,20 +57,12 @@ const LoadingState = () => {
     "Generating portfolio view..."
   ];
 
-  useEffect(() => {
-    if (currentStep >= steps.length) return;
-
-    const timer = setTimeout(() => {
-      setCurrentStep(prev => prev + 1);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [currentStep]);
+  const safeStep = Math.min(currentStep, steps.length - 1);
 
   return (
     <div className="w-full max-w-xl space-y-8 text-center">
       <motion.div
-        key={steps[currentStep]}
+        key={steps[safeStep]}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
@@ -80,7 +72,7 @@ const LoadingState = () => {
           className="font-mono text-sm bg-gradient-to-r from-primary to-muted-foreground bg-clip-text text-transparent" 
           duration={1.2}
         >
-          {steps[currentStep] || steps[steps.length - 1]}
+          {steps[safeStep]}
         </TextShimmer>
       </motion.div>
     </div>
@@ -308,6 +300,17 @@ const NarrativePortfolio = () => {
   const [error, setError] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [loadingComplete, setLoadingComplete] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  useEffect(() => {
+    if (!isLoading || currentStep >= 3) return;
+
+    const timer = setInterval(() => {
+      setCurrentStep(prev => Math.min(prev + 1, 3));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isLoading, currentStep]);
 
   const generateNarrativeBio = (profileData: ProfileData): string => {
     if (!profileData) return '';
@@ -324,6 +327,8 @@ const NarrativePortfolio = () => {
     try {
       setIsLoading(true);
       setLoadingComplete(false);
+      setCurrentStep(0);
+      
       const response = await fetch(`/api/generate-portfolio/${username}`);
       
       if (response.status === 404) {
@@ -335,15 +340,16 @@ const NarrativePortfolio = () => {
         throw new Error('Failed to fetch profile');
       }
 
-      const data = await response.json();
-      setProfile(data.profile);
-      setIsOwner(data.isOwner);
+      const userData = await response.json();
+      setProfile(userData.profile);
+      setIsOwner(userData.isOwner);
       
       setTimeout(() => {
         setLoadingComplete(true);
         setIsLoading(false);
-      }, 6000);
+      }, 4000);
     } catch (err) {
+      console.error("Error fetching profile:", err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setIsLoading(false);
     }
@@ -384,8 +390,8 @@ const NarrativePortfolio = () => {
   if (isLoading || !loadingComplete) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <LoadingState />
-        </div>
+        <LoadingState currentStep={currentStep} />
+      </div>
     );
   }
 

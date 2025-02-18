@@ -5,21 +5,24 @@
 
 import { useState, useEffect } from "react";
 import { ResourceCard } from "./ResourceCard";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X, Layers } from "lucide-react";
+import { Search, X, Layers, Filter } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 // Resource interface definition
 interface Resource {
@@ -27,24 +30,60 @@ interface Resource {
   title: string;
   description: string;
   url: string;
-  type: string;
-  category: string;
-  createdAt?: string;
-  user?: {
+  type: ResourceType;
+  category: ResourceCategory;
+  tags: string[];
+  uniqueViews: number;
+  totalViews: number;
+  likes: number;
+  saves: number;
+  createdAt: string;
+  user: {
     name: string;
     image?: string;
   };
-  tags?: string[];
-  likes?: number;
 }
 
-interface ResourceListPageProps {
+// Add enums from your schema
+enum ResourceType {
+  LIBRARY = "LIBRARY",
+  TOOL = "TOOL",
+  FRAMEWORK = "FRAMEWORK",
+  TUTORIAL = "TUTORIAL",
+  TEMPLATE = "TEMPLATE",
+  ICON_SET = "ICON_SET",
+  ILLUSTRATION = "ILLUSTRATION",
+  COMPONENT_LIBRARY = "COMPONENT_LIBRARY",
+  CODE_SNIPPET = "CODE_SNIPPET",
+  API = "API",
+  DOCUMENTATION = "DOCUMENTATION",
+  COURSE = "COURSE",
+  OTHER = "OTHER"
+}
+
+enum ResourceCategory {
+  FRONTEND = "FRONTEND",
+  BACKEND = "BACKEND",
+  FULLSTACK = "FULLSTACK",
+  DEVOPS = "DEVOPS",
+  MOBILE = "MOBILE",
+  AI_ML = "AI_ML",
+  DATABASE = "DATABASE",
+  SECURITY = "SECURITY",
+  UI_UX = "UI_UX",
+  DESIGN = "DESIGN",
+  MACHINE_LEARNING = "MACHINE_LEARNING",
+  CLOUD = "CLOUD",
+  OTHER = "OTHER"
+}
+
+interface ResourcesListingProps {
   initialFilter?: {
-    type: string;
-    category: string;
+    category?: string;
+    type?: string;
   };
-  hideCategoryFilter?: boolean; // Hide Type and Category filters
-  headerTitle?: string; // Custom header title
+  hideFilters?: boolean;
+  headerTitle?: string;
 }
 
 // Predefined resource types and categories
@@ -140,11 +179,11 @@ function ResourceCardSkeleton() {
   );
 }
 
-export default function ResourceListPage({
+export default function ResourcesListing({
   initialFilter,
-  hideCategoryFilter = false, // Default to false
-  headerTitle = "Developer Resources", // Default header title
-}: ResourceListPageProps) {
+  hideFilters = false,
+  headerTitle
+}: ResourcesListingProps) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
   const [filter, setFilter] = useState({
@@ -198,83 +237,142 @@ export default function ResourceListPage({
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
+      {/* Main Heading with Filters */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h1 className="text-3xl font-bold text-neutral-900 dark:text-white flex items-center gap-3">
-          <Layers className="h-8 w-8 text-neutral-600" />
-          {headerTitle} {/* Dynamic header title */}
+        <h1 className="text-3xl font-bold">
+          {headerTitle || "Developer Resources"}
         </h1>
-        <div className="flex items-center gap-2">
-          <div className="text-neutral-500">
-            {filteredResources.length} resource
-            {filteredResources.length !== 1 ? "s" : ""}
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Search Bar */}
+          <div className="relative flex-1 sm:w-[300px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              type="text"
+              placeholder="Search resources..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-10 rounded-full bg-muted/50 border-0 focus:ring-1 focus:ring-primary"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1.5 top-1/2 transform -translate-y-1/2 h-7 w-7 hover:bg-muted"
+                onClick={() => setSearchTerm("")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-        </div>
-      </div>
 
-      {/* Filters and Search */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Resource Type Filter */}
-        {!hideCategoryFilter && (
-          <Select
-            onValueChange={(value) => setFilter((prev) => ({ ...prev, type: value }))}
-            value={filter.type}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Resource Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {resourceTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type === "ALL" ? "All Types" : type.charAt(0) + type.slice(1).toLowerCase()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+          {/* Type Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className={cn(
+                  "h-9 px-3 gap-2 text-sm font-normal",
+                  filter.type !== "ALL" && "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
+              >
+                <span className="text-muted-foreground">Type:</span>
+                {filter.type === "ALL" ? "All" : filter.type.toLowerCase()}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[180px] p-1">
+              <ScrollArea className="h-[280px]">
+                <DropdownMenuItem
+                  onClick={() => setFilter(prev => ({ ...prev, type: "ALL" }))}
+                  className={cn(
+                    "mb-1 rounded-sm",
+                    filter.type === "ALL" ? "bg-primary/10 text-primary" : ""
+                  )}
+                >
+                  All Types
+                </DropdownMenuItem>
+                {Object.values(ResourceType).map((type) => (
+                  <DropdownMenuItem
+                    key={type}
+                    onClick={() => setFilter(prev => ({ ...prev, type }))}
+                    className={cn(
+                      "mb-1 rounded-sm",
+                      filter.type === type ? "bg-primary/10 text-primary" : ""
+                    )}
+                  >
+                    {type.replace('_', ' ').toLowerCase()}
+                  </DropdownMenuItem>
+                ))}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        {/* Resource Category Filter */}
-        {!hideCategoryFilter && (
-          <Select
-            onValueChange={(value) => setFilter((prev) => ({ ...prev, category: value }))}
-            value={filter.category}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              {resourceCategories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category === "ALL"
-                    ? "All Categories"
-                    : category.replace("_", "/").charAt(0) + category.slice(1).toLowerCase()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+          {/* Category Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className={cn(
+                  "h-9 px-3 gap-2 text-sm font-normal",
+                  filter.category !== "ALL" && "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
+              >
+                <span className="text-muted-foreground">Category:</span>
+                {filter.category === "ALL" ? "All" : filter.category.toLowerCase()}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[180px] p-1">
+              <ScrollArea className="h-[280px]">
+                <DropdownMenuItem
+                  onClick={() => setFilter(prev => ({ ...prev, category: "ALL" }))}
+                  className={cn(
+                    "mb-1 rounded-sm",
+                    filter.category === "ALL" ? "bg-primary/10 text-primary" : ""
+                  )}
+                >
+                  All Categories
+                </DropdownMenuItem>
+                {Object.values(ResourceCategory).map((category) => (
+                  <DropdownMenuItem
+                    key={category}
+                    onClick={() => setFilter(prev => ({ ...prev, category }))}
+                    className={cn(
+                      "mb-1 rounded-sm",
+                      filter.category === category ? "bg-primary/10 text-primary" : ""
+                    )}
+                  >
+                    {category.replace('_', ' ').toLowerCase()}
+                  </DropdownMenuItem>
+                ))}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        {/* Search Input */}
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="Search resources..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-10 rounded-full"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
-          {searchTerm && (
+          {/* Clear Filters */}
+          {(filter.type !== "ALL" || filter.category !== "ALL") && (
             <Button
               variant="ghost"
-              size="icon"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2"
-              onClick={() => setSearchTerm("")}
+              size="sm"
+              onClick={() => setFilter({ type: "ALL", category: "ALL" })}
+              className="h-9 w-9 p-0"
             >
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
+      </div>
+
+      {/* Resource Count */}
+      <div className="text-sm text-muted-foreground">
+        {filteredResources.length} resources found
+        {(filter.type !== "ALL" || filter.category !== "ALL") && (
+          <span className="ml-2 text-xs">
+            {filter.type !== "ALL" && `• ${filter.type.toLowerCase()}`}
+            {filter.category !== "ALL" && `• ${filter.category.toLowerCase()}`}
+          </span>
+        )}
       </div>
 
       {/* Resource List or Skeleton Loading */}

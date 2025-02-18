@@ -11,6 +11,8 @@ import {
   ListPlus,
   Library,
   X,
+  FileText,
+  PenSquare,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -32,6 +34,11 @@ const Sidebar = ({ className }: { className?: string }) => {
   const resourceNavItems = [
     { icon: PlusCircle, label: 'Add New Resource', href: '/dashboard/resources/new' },
     { icon: ListPlus, label: 'Manage Resources', href: '/dashboard/resources/' },
+  ];
+
+  const blogNavItems = [
+    { icon: PenSquare, label: 'Write Blog', href: '/dashboard/blog/new' },
+    { icon: FileText, label: 'My Posts', href: '/dashboard/blog/posts' },
   ];
 
   return (
@@ -94,6 +101,38 @@ const Sidebar = ({ className }: { className?: string }) => {
             </h3>
             <div className="space-y-1">
               {resourceNavItems.map((item) => (
+                <TooltipProvider key={item.label}>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Link href={item.href} passHref>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start gap-3"
+                          size="sm"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{item.label}</span>
+                        </Button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={20}>
+                      {item.label}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Blog Management - New Section */}
+          <div>
+            <h3 className="mb-2 px-4 text-xs font-semibold text-muted-foreground">
+              BLOG MANAGEMENT
+            </h3>
+            <div className="space-y-1">
+              {blogNavItems.map((item) => (
                 <TooltipProvider key={item.label}>
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger asChild>

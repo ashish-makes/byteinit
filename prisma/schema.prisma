@@ -50,6 +50,11 @@ enum InteractionType {
   LIKE
 }
 
+enum VoteType {
+  UP
+  DOWN
+}
+
 model Resource {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   title         String
@@ -149,6 +154,11 @@ model User {
   receivedNotifications Notification[] @relation("UserNotifications")
   sentActions           Notification[] @relation("UserActions")
   reactions     ResourceReaction[]
+  blogs         Blog[]
+  blogLikes     BlogLike[]
+  blogSaves     BlogSave[]
+  comments      Comment[]
+  blogVotes     BlogVote[]
 
   // Optional for WebAuthn support
   authenticators Authenticator[]
@@ -228,4 +238,92 @@ model ResourceReaction {
   @@unique([userId, resourceId, emoji])
   @@index([resourceId])
   @@index([userId])
+}
+
+model Blog {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String      @db.String
+  summary     String?     @db.String
+  slug        String      @unique
+  published   Boolean     @default(false)
+  coverImage  String?
+  tags        String[]
+  featured    Boolean     @default(false)
+  
+  userId      String      @db.ObjectId
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  comments    Comment[]
+  likes       BlogLike[]
+  saves       BlogSave[]
+  views       BlogView[]
+  votes       BlogVote[]
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+}
+
+model Comment {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  content     String      @db.String
+  blogId      String      @db.ObjectId
+  userId      String      @db.ObjectId
+  parentId    String?     @db.ObjectId
+  
+  blog        Blog        @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      Comment?    @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies     Comment[]   @relation("CommentReplies")
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([blogId])
+  @@index([userId])
+}
+
+model BlogLike {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  blogId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@unique([blogId, userId])
+}
+
+model BlogSave {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  blogId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@unique([blogId, userId])
+}
+
+model BlogView {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  blogId    String   @db.ObjectId
+  userId    String?  @db.ObjectId
+  ip        String?
+  createdAt DateTime @default(now())
+}
+
+model BlogVote {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  blogId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @db.ObjectId
+  type      VoteType
+  createdAt DateTime @default(now())
+
+  @@unique([blogId, userId])
 }

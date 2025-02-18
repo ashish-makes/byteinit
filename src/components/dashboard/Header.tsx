@@ -1,6 +1,6 @@
 import React from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
-import { Menu, Plus, Library, User, BookMarked, BarChart, Link2, Settings } from 'lucide-react';
+import { Menu, Plus, Library, User, BookMarked, BarChart, Link2, Settings, FileText, FileUp } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,25 +55,59 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
 
         {/* Right Side: Actions and User Menu */}
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Add Resource Button (Desktop) */}
-          <Button
-            variant="default"
-            className="gap-2 hidden sm:flex"
-            size="sm"
-            onClick={() => (window.location.href = '/dashboard/resources/new')}
-          >
-            <Plus className="h-4 w-4" />
-            Add Resource
-          </Button>
+          {/* Desktop Add Button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="default"
+                className="gap-2 hidden sm:flex"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Add New
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <Link href="/dashboard/resources/new">
+                <DropdownMenuItem className="gap-2">
+                  <FileUp className="h-4 w-4" />
+                  Add Resource
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/dashboard/blog/new">
+                <DropdownMenuItem className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Write Blog Post
+                </DropdownMenuItem>
+              </Link>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* Add Resource Button (Mobile) */}
-          <Button
-            variant="default"
-            className="h-8 w-8 rounded-full p-0 sm:hidden"
-            onClick={() => (window.location.href = '/dashboard/resources/new')}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          {/* Mobile Add Button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="default"
+                className="h-8 w-8 rounded-full p-0 sm:hidden"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <Link href="/dashboard/resources/new">
+                <DropdownMenuItem className="gap-2">
+                  <FileUp className="h-4 w-4" />
+                  Add Resource
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/dashboard/blog/new">
+                <DropdownMenuItem className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Write Blog Post
+                </DropdownMenuItem>
+              </Link>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Notifications Dropdown */}
           <NotificationsDropdown />
@@ -125,6 +159,12 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
                   <DropdownMenuItem className="gap-2">
                     <Link2 className="h-4 w-4" />
                     Public Profile
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/dashboard/blog/posts">
+                  <DropdownMenuItem className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    My Blog Posts
                   </DropdownMenuItem>
                 </Link>
                 <DropdownMenuItem className="gap-2">
