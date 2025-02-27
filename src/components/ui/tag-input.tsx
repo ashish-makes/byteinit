@@ -7,28 +7,29 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 interface TagInputProps {
-  value: string
-  onChange: (value: string) => void
+  value: string[]
+  onChange: (value: string[]) => void
   placeholder?: string
+  disabled?: boolean
 }
 
-export function TagInput({ value, onChange, placeholder }: TagInputProps) {
+export function TagInput({ value, onChange, placeholder, disabled }: TagInputProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newTag, setNewTag] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   const addTag = () => {
     if (newTag.trim()) {
-      const currentTags = value ? value.split(',').map(t => t.trim()) : []
-      onChange([...currentTags, newTag.trim()].join(', '))
+      const currentTags = value ? value.map(t => t.trim()) : []
+      onChange([...currentTags, newTag.trim()])
       setNewTag('')
     }
     setIsAdding(false)
   }
 
   const removeTag = (tagToRemove: string) => {
-    const currentTags = value ? value.split(',').map(t => t.trim()) : []
-    onChange(currentTags.filter(tag => tag !== tagToRemove).join(', '))
+    const currentTags = value ? value.map(t => t.trim()) : []
+    onChange(currentTags.filter(tag => tag !== tagToRemove))
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -49,7 +50,7 @@ export function TagInput({ value, onChange, placeholder }: TagInputProps) {
 
   return (
     <div className="flex flex-wrap gap-2 p-2 bg-muted/20 rounded-lg min-h-[2.5rem] items-center">
-      {value && value.split(',').map((tag) => (
+      {value && value.map((tag) => (
         <Badge
           key={tag}
           variant="secondary"

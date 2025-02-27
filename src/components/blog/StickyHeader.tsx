@@ -19,33 +19,79 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface StickyHeaderProps {
   post: {
     id: string
     title: string
     votes: Array<{ type: 'UP' | 'DOWN' }>
-    saves: Array<{ id: string }>
+    saves?: Array<{ id: string }>
+    _count: {
+      comments: number
+    }
   }
-  onVote: (id: string, type: 'UP' | 'DOWN') => Promise<void>
-  onSave: (id: string) => Promise<void>
+  onVote: (id: string, type: 'UP' | 'DOWN') => Promise<{ error?: string, success?: boolean }>
+  onSave: (id: string) => Promise<{ error?: string, success?: boolean }>
 }
 
+const SignInButton = () => (
+  <span className="text-sm bg-transparent hover:underline">
+    Sign in
+  </span>
+);
+
 export function StickyHeader({ post, onVote, onSave }: StickyHeaderProps) {
+  const router = useRouter()
+
+  const handleVote = async (id: string, type: 'UP' | 'DOWN') => {
+    const result = await onVote(id, type)
+    if ('error' in result && result.error) {
+      toast.error(result.error)
+    }
+  }
+
+  const handleSave = async (id: string) => {
+    const result = await onSave(id)
+    if ('error' in result && result.error) {
+      toast.error(result.error)
+    }
+  }
+
+  const scrollToComments = () => {
+    const commentsSection = document.getElementById('comments')
+    if (commentsSection) {
+      commentsSection.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
   return (
     <div 
       role="banner"
       className="sticky top-14 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
     >
-      <div className="flex h-10 items-center px-4 max-w-[900px] mx-auto">
-        <h2 className="text-sm font-medium truncate flex-1 mr-4">
-          {post.title}
-        </h2>
+      <div className="flex h-14 items-center px-6">
+        {/* Title container with gradient fade */}
+        <div className="relative flex-1 mr-4">
+          <h2 className="text-sm font-medium line-clamp-2 pr-8">
+            {post.title}
+          </h2>
+          {/* Updated gradient fade effect */}
+          <div 
+            className="absolute right-0 top-0 h-full w-16 pointer-events-none"
+            style={{
+              backgroundImage: `linear-gradient(to right, transparent, var(--background) 95%)`,
+              WebkitMaskImage: `linear-gradient(to right, transparent, black 95%)`,
+            }}
+          />
+        </div>
 
-        <div className="flex items-center gap-1.5">
+        {/* Actions container with fixed width */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Vote Buttons with Animation */}
           <div className="flex items-center rounded-full bg-muted/50">
-            <form action={() => onVote(post.id, 'UP')}>
+            <form action={() => handleVote(post.id, 'UP')}>
               <motion.button
                 type="submit"
                 whileHover={{ scale: 1.05 }}
@@ -78,7 +124,7 @@ export function StickyHeader({ post, onVote, onSave }: StickyHeaderProps) {
               </motion.span>
             </AnimatePresence>
 
-            <form action={() => onVote(post.id, 'DOWN')}>
+            <form action={() => handleVote(post.id, 'DOWN')}>
               <motion.button
                 type="submit"
                 whileHover={{ scale: 1.05 }}
@@ -102,33 +148,35 @@ export function StickyHeader({ post, onVote, onSave }: StickyHeaderProps) {
 
           {/* Comments Button with Animation */}
           <motion.button
+            onClick={scrollToComments}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0 gap-1.5"
           >
             <MessageSquareIcon className="h-4 w-4" />
+            <span className="text-xs font-medium">{post._count.comments}</span>
           </motion.button>
 
           {/* Save Button with Animation */}
-          <form action={() => onSave(post.id)}>
+          <form action={() => handleSave(post.id)}>
             <motion.button
               type="submit"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={cn(
-                "inline-flex items-center justify-center h-8 w-8 rounded-full bg-muted/50",
-                post.saves.length > 0 
+                "inline-flex items-center justify-center h-8 w-8 rounded-full bg-muted/50 shrink-0",
+                (post.saves?.length ?? 0) > 0 
                   ? "text-blue-600 bg-blue-100 dark:text-[#00e5bf] dark:bg-[#00e5bf]/10" 
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
               <motion.div
-                animate={post.saves.length > 0 ? { scale: [1, 1.5, 1] } : { scale: 1 }}
+                animate={(post.saves?.length ?? 0) > 0 ? { scale: [1, 1.5, 1] } : { scale: 1 }}
                 transition={{ duration: 0.3 }}
               >
                 <BookmarkIcon className={cn(
                   "h-4 w-4",
-                  post.saves.length > 0 && "fill-current"
+                  (post.saves?.length ?? 0) > 0 && "fill-current"
                 )} />
               </motion.div>
             </motion.button>
@@ -140,7 +188,7 @@ export function StickyHeader({ post, onVote, onSave }: StickyHeaderProps) {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
               >
                 <Share2Icon className="h-4 w-4" />
               </motion.button>
@@ -168,4 +216,4 @@ export function StickyHeader({ post, onVote, onSave }: StickyHeaderProps) {
       </div>
     </div>
   )
-} 
+}

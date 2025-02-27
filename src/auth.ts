@@ -8,6 +8,7 @@ import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { UserRole } from "@prisma/client"
+import GitHub from "next-auth/providers/github"
 
 export const {
   handlers: { GET, POST },
@@ -86,6 +87,10 @@ export const {
           username: user.username || ""
         }
       },
+    }),
+    GitHub({
+      clientId: process.env.GITHUB_ID,
+      clientSecret: process.env.GITHUB_SECRET,
     }),
   ],
   callbacks: {

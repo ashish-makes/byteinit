@@ -20,7 +20,7 @@ export function UserNav() {
   if (!session?.user) {
     return (
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/login">Login</Link>
+        <Link href="/auth/login">Login</Link>
       </Button>
     )
   }

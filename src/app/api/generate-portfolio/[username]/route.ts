@@ -9,6 +9,7 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const session = await auth();
+    const currentUserId = session?.user?.id;
     const { username } = await params;
     
     // Create normalized version by removing special characters and spaces
@@ -28,8 +29,8 @@ export async function GET(
         ]
       },
       select: {
-        username: true,
         id: true,
+        username: true,
         name: true,
         email: true,
         image: true,
@@ -54,7 +55,44 @@ export async function GET(
             createdAt: "desc",
           },
         },
-      },
+        followers: {
+          select: {
+            id: true,
+          }
+        },
+        following: {
+          select: {
+            id: true,
+          }
+        },
+        _count: {
+          select: {
+            followers: true,
+            following: true
+          }
+        },
+        blogs: {
+          where: { published: true },
+          orderBy: [
+            { votes: { _count: 'desc' }},
+            { createdAt: 'desc' }
+          ],
+          take: 3,
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            summary: true,
+            createdAt: true,
+            _count: {
+              select: {
+                votes: true,
+                comments: true
+              }
+            }
+          }
+        }
+      }
     });
 
     // If no exact match found, try fuzzy match
@@ -77,8 +115,8 @@ export async function GET(
           ]
         },
         select: {
-          username: true,
           id: true,
+          username: true,
           name: true,
           email: true,
           image: true,
@@ -103,6 +141,43 @@ export async function GET(
               createdAt: "desc",
             },
           },
+          followers: {
+            select: {
+              id: true,
+            }
+          },
+          following: {
+            select: {
+              id: true,
+            }
+          },
+          _count: {
+            select: {
+              followers: true,
+              following: true
+            }
+          },
+          blogs: {
+            where: { published: true },
+            orderBy: [
+              { votes: { _count: 'desc' }},
+              { createdAt: 'desc' }
+            ],
+            take: 3,
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              summary: true,
+              createdAt: true,
+              _count: {
+                select: {
+                  votes: true,
+                  comments: true
+                }
+              }
+            }
+          }
         },
       });
     }
@@ -161,6 +236,8 @@ export async function GET(
     // Merge core user details with the generated narrative while preserving certain values
     const enhancedProfile = {
       ...generatedData,
+      id: userDetails.id,
+      username: userDetails.username,
       name: userDetails.name,
       email: userDetails.email,
       image: userDetails.image,
@@ -176,11 +253,15 @@ export async function GET(
       currentRole: userDetails.currentRole || generatedData.currentRole,
       company: userDetails.company || generatedData.company,
       location: userDetails.location || generatedData.location,
+      followerCount: userDetails._count.followers,
+      followingCount: userDetails._count.following,
+      isFollowing: currentUserId ? userDetails.followers.some(f => f.id === currentUserId) : false,
+      isOwner: currentUserId === userDetails.id,
+      blogs: userDetails.blogs || []
     };
 
     return NextResponse.json({
       profile: enhancedProfile,
-      isOwner: session?.user?.email === userDetails.email,
     });
   } catch (error) {
     console.error("Portfolio generation error:", error);

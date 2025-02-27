@@ -140,7 +140,7 @@ const ResourcesHeader = () => {
           {!isLoggedIn && (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" className="rounded-full h-9" asChild>
-                <Link href="/login">Log in</Link>
+                <Link href="/auth/login">Log in</Link>
               </Button>
               <Button 
                 size="sm" 

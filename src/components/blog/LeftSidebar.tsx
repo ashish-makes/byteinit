@@ -23,23 +23,46 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Badge } from "@/components/ui/badge"
 
-const LeftSidebar = () => {
+interface NavItem {
+  icon: React.ElementType;
+  label: string;
+  href: string;
+  count?: number;
+}
+
+interface LeftSidebarProps {
+  savedCount?: number;
+}
+
+const LeftSidebar = ({ savedCount = 0 }: LeftSidebarProps) => {
   const pathname = usePathname();
   
-  const mainNav = [
+  console.log("LeftSidebar rendered with savedCount:", savedCount);
+  
+  const mainNav: NavItem[] = [
     { icon: Home, label: 'Home', href: '/blog' },
     { icon: Flame, label: 'Popular', href: '/blog/popular' },
     { icon: Newspaper, label: 'Latest', href: '/blog/latest' },
     { icon: Sparkles, label: 'Best', href: '/blog/best' },
   ];
 
-  const personalNav = [
-    { icon: Bookmark, label: 'Saved', href: '/blog/saved' },
-    { icon: History, label: 'History', href: '/blog/history' },
+  const personalNav: NavItem[] = [
+    { 
+      icon: Bookmark, 
+      label: 'Saved', 
+      href: '/blog/saved',
+      count: savedCount 
+    },
+    { 
+      icon: History, 
+      label: 'History', 
+      href: '/blog/history' 
+    },
   ];
 
-  const topics = [
+  const topics: NavItem[] = [
     { icon: Code2, label: 'Programming', href: '/blog/topic/programming' },
     { icon: Globe, label: 'Web Dev', href: '/blog/topic/web-dev' },
     { icon: Brain, label: 'AI & ML', href: '/blog/topic/ai-ml' },
@@ -50,7 +73,7 @@ const LeftSidebar = () => {
     { icon: Database, label: 'Databases', href: '/blog/topic/databases' },
   ];
 
-  const NavItem = ({ item }: { item: typeof mainNav[0] }) => (
+  const NavItem = ({ item }: { item: NavItem }) => (
     <Button
       variant="ghost"
       className={cn(
@@ -61,9 +84,19 @@ const LeftSidebar = () => {
       )}
       asChild
     >
-      <Link href={item.href}>
-        <item.icon className="mr-2 h-4 w-4" />
-        <span className="truncate">{item.label}</span>
+      <Link href={item.href} className="flex items-center justify-between w-full">
+        <div className="flex items-center">
+          <item.icon className="mr-2 h-4 w-4" />
+          <span className="truncate">{item.label}</span>
+        </div>
+        {item.count !== undefined && item.count > 0 && (
+          <Badge 
+            variant="secondary" 
+            className="ml-auto text-xs px-2 min-w-[20px] h-5 flex items-center justify-center rounded-full"
+          >
+            {item.count}
+          </Badge>
+        )}
       </Link>
     </Button>
   );
@@ -73,7 +106,7 @@ const LeftSidebar = () => {
     items 
   }: { 
     title?: string;
-    items: typeof mainNav;
+    items: NavItem[];
   }) => (
     <div className="space-y-1">
       {title && (

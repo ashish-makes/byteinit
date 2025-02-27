@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Loader2, Upload, UploadCloud, X } from 'lucide-react'
+import { Loader2, Upload, UploadCloud, X, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
 import { useRouter } from "next/navigation"
 import { Switch } from "@/components/ui/switch"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const blogPostSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -29,6 +30,63 @@ const blogPostSchema = z.object({
 })
 
 type BlogPostFormData = z.infer<typeof blogPostSchema>
+
+type SEOFeedback = {
+  message: string
+  type: 'success' | 'warning' | 'error'
+}
+
+function generateSlug(title: string) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with -
+    .replace(/-+/g, '-') // Replace multiple - with single -
+}
+
+function getTitleFeedback(title: string): SEOFeedback {
+  if (!title) return { message: 'Title is required', type: 'error' }
+  if (title.length < 20) return { message: 'Title is too short for good SEO', type: 'warning' }
+  if (title.length > 70) return { message: 'Title is too long for SEO', type: 'warning' }
+  return { message: 'Title length is optimal for SEO', type: 'success' }
+}
+
+function getSummaryFeedback(summary: string): SEOFeedback {
+  if (!summary) return { message: 'Adding a summary improves SEO', type: 'warning' }
+  if (summary.length < 50) return { message: 'Summary is too short for good SEO', type: 'warning' }
+  if (summary.length > 160) return { message: 'Summary is too long for SEO', type: 'warning' }
+  return { message: 'Summary length is optimal for SEO', type: 'success' }
+}
+
+function getSlugFeedback(slug: string): SEOFeedback {
+  if (!slug) return { message: 'Slug is required', type: 'error' }
+  if (slug.length > 60) return { message: 'Slug is too long for SEO', type: 'warning' }
+  return { message: 'Slug length is good for SEO', type: 'success' }
+}
+
+function SEOIndicator({ feedback, show }: { feedback: SEOFeedback, show: boolean }) {
+  // Don't show anything if not needed to show or if it's a success state
+  if (!show || feedback.type === 'success') return null;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1">
+            <AlertCircle className={cn(
+              "h-4 w-4",
+              feedback.type === 'warning' ? "text-yellow-500" : "text-red-500"
+            )} />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{feedback.message}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
 
 const ImageUpload = ({ 
   value,
@@ -143,7 +201,9 @@ const ImageUpload = ({
 
 export default function NewBlogPost() {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSlugEdited, setIsSlugEdited] = useState(false)
   const router = useRouter()
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({})
 
   const form = useForm<BlogPostFormData>({
     resolver: zodResolver(blogPostSchema),
@@ -157,6 +217,18 @@ export default function NewBlogPost() {
       published: false,
     }
   })
+
+  // Watch title changes and update slug
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'title' && !isSlugEdited) {
+        const newSlug = generateSlug(value.title || '')
+        form.setValue('slug', newSlug, { shouldValidate: true })
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [form, isSlugEdited])
 
   async function onSubmit(data: BlogPostFormData) {
     try {
@@ -205,6 +277,16 @@ export default function NewBlogPost() {
     }
   }
 
+  // Get feedback for current values
+  const titleFeedback = getTitleFeedback(form.watch('title'))
+  const slugFeedback = getSlugFeedback(form.watch('slug'))
+  const summaryFeedback = getSummaryFeedback(form.watch('summary') || '')
+
+  // Show indicators only when there are warnings or errors
+  const showTitleIndicator = touchedFields.title && titleFeedback.type !== 'success'
+  const showSlugIndicator = touchedFields.slug && slugFeedback.type !== 'success'
+  const showSummaryIndicator = touchedFields.summary && summaryFeedback.type !== 'success'
+
   return (
     <div className="w-full dark:bg-background/50 bg-white dark:border dark:border-border rounded-lg shadow-sm p-6">
       <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
@@ -215,39 +297,84 @@ export default function NewBlogPost() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="title">Title *</Label>
+              <SEOIndicator 
+                feedback={titleFeedback} 
+                show={showTitleIndicator}
+              />
+            </div>
             <Input
               id="title"
               {...form.register('title')}
               placeholder="My Awesome Blog Post"
+              onFocus={() => setTouchedFields(prev => ({ ...prev, title: true }))}
             />
-            {form.formState.errors.title && (
-              <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              {showTitleIndicator && `${titleFeedback.message} `}
+              ({form.watch('title')?.length || 0}/70 characters)
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slug">URL Slug *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="slug">URL Slug *</Label>
+              <SEOIndicator 
+                feedback={slugFeedback} 
+                show={showSlugIndicator}
+              />
+            </div>
             <Input
               id="slug"
               {...form.register('slug')}
               placeholder="my-awesome-blog-post"
+              disabled={!isSlugEdited}
+              onChange={(e) => {
+                if (!isSlugEdited) {
+                  setIsSlugEdited(true)
+                }
+                form.setValue('slug', e.target.value, { shouldValidate: true })
+              }}
             />
-            {form.formState.errors.slug && (
-              <p className="text-xs text-destructive">{form.formState.errors.slug.message}</p>
-            )}
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                This will be the URL of your post: /blog/<span className="font-mono">{form.watch('slug') || 'url-slug'}</span>
+                {showSlugIndicator && <span className="ml-1">• {slugFeedback.message}</span>}
+              </p>
+              {isSlugEdited && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsSlugEdited(false)
+                    form.setValue('slug', generateSlug(form.watch('title')))
+                  }}
+                >
+                  Reset to auto-generate
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="summary">Summary</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="summary">Summary</Label>
+              <SEOIndicator 
+                feedback={summaryFeedback} 
+                show={showSummaryIndicator}
+              />
+            </div>
             <Textarea
               id="summary"
               {...form.register('summary')}
               placeholder="Brief description of your post..."
+              onFocus={() => setTouchedFields(prev => ({ ...prev, summary: true }))}
             />
-            {form.formState.errors.summary && (
-              <p className="text-xs text-destructive">{form.formState.errors.summary.message}</p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              {showSummaryIndicator && `${summaryFeedback.message} `}
+              ({form.watch('summary')?.length || 0}/160 characters)
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -314,8 +441,8 @@ export default function NewBlogPost() {
               control={form.control}
               render={({ field }) => (
                 <TagInput
-                  value={field.value.join(', ')}
-                  onChange={(value) => field.onChange(value.split(',').map(tag => tag.trim()))}
+                  value={field.value}
+                  onChange={(value) => field.onChange(value)}
                 />
               )}
             />

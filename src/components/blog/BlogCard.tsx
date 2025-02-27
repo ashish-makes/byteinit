@@ -2,15 +2,12 @@
 
 import React from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowUp, ArrowDown, MessageCircle, Bookmark, Clock } from "lucide-react"
+import { Clock, MessageSquare } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
-import { vote, toggleSave } from "@/app/(blog)/blog/actions"
-import { useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
 import { BlogPostActions } from "./BlogPostActions"
+import { formatDistanceToNow, format } from "date-fns"
+import { toast } from "sonner"
 
 interface BlogCardProps {
   post: {
@@ -43,8 +40,9 @@ function stripHtml(html: string) {
 }
 
 export default function BlogCard({ post }: BlogCardProps) {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = React.useState(false)
+  const handleUnauthenticatedAction = () => {
+    toast.error("Please sign in to interact with posts")
+  }
 
   function calculateReadingTime(content: string): string {
     const wordsPerMinute = 200;
@@ -53,10 +51,23 @@ export default function BlogCard({ post }: BlogCardProps) {
     return `${minutes} min read`;
   }
 
+  function formatDate(date: Date) {
+    const distance = formatDistanceToNow(new Date(date), { addSuffix: true })
+    const fullDate = format(new Date(date), 'MMM d, yyyy')
+    
+    return {
+      relative: distance,
+      full: fullDate
+    }
+  }
+
   return (
     <Card className="w-full hover:bg-accent/5 transition-colors duration-200 shadow-none border-[0.5px]">
       <div className="flex items-start p-4 gap-4">
-        <BlogPostActions.Vote post={post} />
+        <BlogPostActions.Vote 
+          post={post} 
+          onUnauthenticated={handleUnauthenticatedAction}
+        />
 
         <div className="flex-1 min-w-0 space-y-1">
           <Link href={`/blog/${post.slug}`} className="group">
@@ -76,16 +87,27 @@ export default function BlogCard({ post }: BlogCardProps) {
             </Avatar>
             <span>{post.user?.name}</span>
             <span>•</span>
-            <time dateTime={post.createdAt.toISOString()}>{new Date(post.createdAt).toLocaleDateString()}</time>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <time 
+              dateTime={post.createdAt.toISOString()}
+              title={formatDate(post.createdAt).full}
+            >
+              {formatDate(post.createdAt).relative}
+            </time>
+            <span>•</span>
+            <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               <span>{calculateReadingTime(post.content)}</span>
+            </div>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              <span>{post._count.comments}</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2">
             <div className="flex flex-wrap gap-1">
-              {post.tags.slice(0, 3).map((tag) => (
+              {post.tags.slice(0, 10).map((tag) => (
                 <Link
                   key={tag}
                   href={`/blog/tag/${tag}`}
@@ -95,8 +117,13 @@ export default function BlogCard({ post }: BlogCardProps) {
                 </Link>
               ))}
             </div>
-            <BlogPostActions.Secondary post={post} />
+            <BlogPostActions.Secondary 
+              post={post} 
+              onUnauthenticated={handleUnauthenticatedAction}
+            />
           </div>
+
+
         </div>
       </div>
     </Card>

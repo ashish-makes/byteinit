@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { prisma } from "../prisma"
+import { siteConfig } from '@/config/site'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await prisma.blog.findMany({
@@ -12,13 +13,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     {
-      url: 'https://yoursite.com',
+      url: siteConfig.domain,
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1,
     },
     ...posts.map((post) => ({
-      url: `https://yoursite.com/blog/${post.slug}`,
+      url: `${siteConfig.domain}/blog/${post.slug}`,
       lastModified: post.updatedAt,
       changeFrequency: 'weekly' as const,
       priority: 0.8,

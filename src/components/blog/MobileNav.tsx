@@ -2,7 +2,13 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetTrigger, 
+  SheetClose,
+  SheetTitle 
+} from "@/components/ui/sheet";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -21,13 +27,15 @@ import {
   Cloud,
   HelpCircle,
   History,
-  TrendingUp
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSavedPosts } from "@/contexts/SavedPostsContext";
+import { Badge } from "@/components/ui/badge";
 
 const MobileNav = () => {
   const pathname = usePathname();
+  const { savedPosts } = useSavedPosts();
   
   const mainNav = [
     { icon: Home, label: 'Home', href: '/blog' },
@@ -37,7 +45,12 @@ const MobileNav = () => {
   ];
 
   const personalNav = [
-    { icon: Bookmark, label: 'Saved', href: '/blog/saved' },
+    { 
+      icon: Bookmark, 
+      label: 'Saved', 
+      href: '/blog/saved',
+      count: savedPosts.size 
+    },
     { icon: History, label: 'History', href: '/blog/history' },
   ];
 
@@ -49,7 +62,17 @@ const MobileNav = () => {
     { icon: Cloud, label: 'Cloud', href: '/blog/topic/cloud' },
   ];
   
-  const NavItem = ({ icon: Icon, label, href }: { icon: any; label: string; href: string }) => (
+  const NavItem = ({ 
+    icon: Icon, 
+    label, 
+    href, 
+    count 
+  }: { 
+    icon: React.ElementType
+    label: string
+    href: string
+    count?: number 
+  }) => (
     <Link href={href} className="w-full">
       <div className={cn(
         "group flex items-center gap-3 px-3 py-2 transition-colors rounded-md",
@@ -59,6 +82,14 @@ const MobileNav = () => {
       )}>
         <Icon className="h-4 w-4" />
         <span className="flex-1 text-sm">{label}</span>
+        {count !== undefined && count > 0 && (
+          <Badge 
+            variant="secondary" 
+            className="ml-auto text-xs px-2 min-w-[20px] h-5 flex items-center justify-center rounded-full"
+          >
+            {count}
+          </Badge>
+        )}
       </div>
     </Link>
   );
@@ -83,6 +114,7 @@ const MobileNav = () => {
           <Link href="/blog" className="font-semibold tracking-tight">
             ByteInit
           </Link>
+          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <Button
             variant="ghost"
             size="icon"

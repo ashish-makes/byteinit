@@ -3,7 +3,17 @@
 import { StickyHeader } from "./StickyHeader"
 import { vote, toggleSave } from "@/app/(blog)/blog/actions"
 
-export function StickyHeaderClient({ post }: { post: any }) {
+interface Post {
+  id: string
+  title: string
+  votes: Array<{ type: 'UP' | 'DOWN' }>
+  saves?: Array<{ id: string }>
+  _count: {
+    comments: number
+  }
+}
+
+export function StickyHeaderClient({ post }: { post: Post }) {
   return (
     <StickyHeader 
       post={post} 

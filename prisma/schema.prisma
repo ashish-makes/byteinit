@@ -144,6 +144,8 @@ model User {
   company         String?
   lookingForWork  Boolean   @default(false)
 
+  reputation Int @default(0)
+
   password      String?
   resetToken        String?
   resetTokenExpiry  DateTime?
@@ -159,12 +161,20 @@ model User {
   blogSaves     BlogSave[]
   comments      Comment[]
   blogVotes     BlogVote[]
+  commentReactions CommentReaction[]
+  blogReactions BlogReaction[]
 
   // Optional for WebAuthn support
   authenticators Authenticator[]
  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Self-referential relationships for follows
+  followers    User[]   @relation("UserFollows", fields: [followerIds], references: [id])
+  following    User[]   @relation("UserFollows", fields: [followingIds], references: [id])
+  followerIds  String[] @db.ObjectId @default([])
+  followingIds String[] @db.ObjectId @default([])
 }
  
 model Account {
@@ -259,12 +269,29 @@ model Blog {
   saves       BlogSave[]
   views       BlogView[]
   votes       BlogVote[]
+  reactions BlogReaction[]
   
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   @@index([userId])
 }
+
+model BlogReaction {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  emoji     String
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  blogId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([blogId, userId, emoji])
+  @@index([blogId])
+  @@index([userId])
+}
+
 
 model Comment {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
@@ -277,12 +304,28 @@ model Comment {
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent      Comment?    @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replies     Comment[]   @relation("CommentReplies")
+  reactions   CommentReaction[]
   
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   @@index([blogId])
   @@index([userId])
+  @@index([parentId])
+}
+
+model CommentReaction {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  emoji     String
+  userId    String   @db.ObjectId
+  commentId String   @db.ObjectId
+  createdAt DateTime @default(now())
+  
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId, emoji], name: "userId_commentId_emoji")
+  @@index([commentId])
 }
 
 model BlogLike {
@@ -326,4 +369,14 @@ model BlogVote {
   createdAt DateTime @default(now())
 
   @@unique([blogId, userId])
+}
+
+model SearchQuery {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  query     String
+  userId    String?  @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@index([query])
+  @@index([createdAt])
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
 import { cn } from "@/lib/utils"
@@ -10,6 +11,9 @@ import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { vote, toggleSave } from "@/app/(blog)/blog/actions"
+import { useSavedPosts } from "@/contexts/SavedPostsContext"
+import { useSession } from "next-auth/react"
+import { toast } from "sonner"
 
 interface FeaturedPost {
   id: string
@@ -79,17 +83,25 @@ export function FeaturedPosts({ posts }: FeaturedPostsProps) {
 
 function FeaturedCard({ post }: { post: FeaturedPost }) {
   const router = useRouter()
+  const session = useSession()
   const [isLoading, setIsLoading] = React.useState(false)
-  
+  const { savedPosts, toggleSavedPost } = useSavedPosts()
+  const saved = savedPosts.has(post.id)
+
   // Get current vote state from post.votes
   const currentVote = post.votes[0]?.type || null
   const [voted, setVoted] = React.useState<"UP" | "DOWN" | null>(currentVote)
-  
-  // Get current save state from post.saves
-  const isSaved = post.saves.length > 0
-  const [saved, setSaved] = React.useState(isSaved)
+
+  const handleUnauthenticatedAction = () => {
+    toast.error("Please sign in to interact with posts")
+  }
 
   const handleVote = async (voteType: "UP" | "DOWN") => {
+    if (!session.data?.user) {
+      handleUnauthenticatedAction()
+      return
+    }
+
     try {
       setIsLoading(true)
       setVoted(voted === voteType ? null : voteType)
@@ -104,13 +116,18 @@ function FeaturedCard({ post }: { post: FeaturedPost }) {
   }
 
   const handleSave = async () => {
+    if (!session.data?.user) {
+      handleUnauthenticatedAction()
+      return
+    }
+
     try {
       setIsLoading(true)
-      setSaved(!saved)
+      toggleSavedPost(post.id) // Update shared state immediately
       await toggleSave(post.id)
       router.refresh()
     } catch (error) {
-      setSaved(isSaved)
+      toggleSavedPost(post.id) // Revert on error
       console.error('Failed to save:', error)
     } finally {
       setIsLoading(false)
@@ -233,7 +250,19 @@ function FeaturedCard({ post }: { post: FeaturedPost }) {
                 animate={saved ? { scale: [1, 1.5, 1] } : { scale: 1 }}
                 transition={{ duration: 0.3 }}
               >
-                <Bookmark className={cn("h-4 w-4", saved && "fill-current")} />
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="16" 
+                  height="16" 
+                  viewBox="0 0 24 24" 
+                  fill={saved ? "currentColor" : "none"}
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
               </motion.div>
             </Button>
           </motion.div>

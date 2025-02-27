@@ -5,15 +5,33 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Mail, Github, Globe, Twitter, RefreshCw, User2, Calendar, Link as LinkIcon } from 'lucide-react';
+import { Mail, Github, Globe, Twitter, RefreshCw, User2, Calendar, Link as LinkIcon, ArrowUp, MessageSquare } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TextShimmer } from '@/components/core/text-shimmer';
 import Link from 'next/link';
+import { FollowButton } from "@/components/FollowButton"
+import { useSession } from 'next-auth/react';
+import { getFollowStats } from "@/lib/actions/follow"
+import { formatDistanceToNowStrict } from 'date-fns';
+
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string | null;
+  createdAt: Date;
+  _count: {
+    votes: number;
+    comments: number;
+  }
+}
 
 interface ProfileData {
+  id: string;
+  username: string;
   name: string;
   email: string;
   bio: string;
@@ -33,6 +51,10 @@ interface ProfileData {
     type: string;
     createdAt: string;
   }>;
+  followerCount: number
+  isFollowing: boolean
+  followingCount: number
+  blogs: BlogPost[]
 }
 
 const fadeIn = {
@@ -290,6 +312,47 @@ const FloatingHeader = ({ profile }: { profile: ProfileData }) => {
   );
 };
 
+const PopularPosts = ({ posts }: { posts: BlogPost[] }) => {
+  if (!posts.length) return null;
+
+  return (
+    <motion.div variants={fadeIn} className="mb-8">
+      <h2 className="text-lg font-semibold mb-4">Popular Posts</h2>
+      <div className="grid gap-4">
+        {posts.map(post => (
+          <Link 
+            key={post.id}
+            href={`/blog/${post.slug}`}
+            className="group block space-y-1.5 rounded-lg border bg-card/50 p-4 hover:bg-muted/50 transition-colors"
+          >
+            <h3 className="font-medium group-hover:text-primary transition-colors">
+              {post.title}
+            </h3>
+            {post.summary && (
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {post.summary}
+              </p>
+            )}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <ArrowUp className="h-3.5 w-3.5" />
+                {post._count.votes}
+              </span>
+              <span className="flex items-center gap-1">
+                <MessageSquare className="h-3.5 w-3.5" />
+                {post._count.comments}
+              </span>
+              <time dateTime={new Date(post.createdAt).toISOString()}>
+                {formatDistanceToNowStrict(new Date(post.createdAt))} ago
+              </time>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
 const NarrativePortfolio = () => {
   const params = useParams();
   const username = params.username as string;
@@ -301,6 +364,7 @@ const NarrativePortfolio = () => {
   const [isOwner, setIsOwner] = useState(false);
   const [loadingComplete, setLoadingComplete] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const session = useSession();
 
   useEffect(() => {
     if (!isLoading || currentStep >= 3) return;
@@ -341,8 +405,15 @@ const NarrativePortfolio = () => {
       }
 
       const userData = await response.json();
-      setProfile(userData.profile);
-      setIsOwner(userData.isOwner);
+      
+      setProfile({
+        ...userData.profile,
+        followerCount: userData.profile.followerCount,
+        followingCount: userData.profile.followingCount,
+        isFollowing: userData.profile.isFollowing,
+        blogs: userData.profile.blogs || []
+      });
+      setIsOwner(userData.profile.isOwner);
       
       setTimeout(() => {
         setLoadingComplete(true);
@@ -357,6 +428,24 @@ const NarrativePortfolio = () => {
 
   useEffect(() => {
     fetchProfile();
+  }, []);
+
+  // Update the follower update effect
+  useEffect(() => {
+    const channel = new BroadcastChannel('follower-update');
+    
+    channel.onmessage = (event) => {
+      if (event.data.type === 'FOLLOWER_UPDATE') {
+        // Just update the follower count and following state
+        setProfile(prev => prev ? {
+          ...prev,
+          followerCount: event.data.count,
+          isFollowing: event.data.isFollowing
+        } : null);
+      }
+    };
+
+    return () => channel.close();
   }, []);
 
   const handleRegenerate = async () => {
@@ -427,7 +516,7 @@ const NarrativePortfolio = () => {
               </Avatar>
               
               <div className="flex-1 space-y-2 text-center sm:text-left">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <h1 className="text-2xl font-bold tracking-tight">{profile.name}</h1>
                   {profile.lookingForWork && (
                     <span className="inline-flex items-center justify-center gap-1.5 text-xs px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full self-center sm:self-start whitespace-nowrap">
@@ -446,6 +535,27 @@ const NarrativePortfolio = () => {
                     {profile.location}
                   </p>
                 )}
+                <div className="flex items-center gap-4 text-sm pt-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-muted-foreground">
+                      <strong className="text-foreground font-medium">{profile.followerCount.toLocaleString()}</strong>
+                      {' '}
+                      {profile.followerCount === 1 ? 'follower' : 'followers'}
+                    </span>
+                    <span className="text-muted-foreground">
+                      <strong className="text-foreground font-medium">{profile.followingCount.toLocaleString()}</strong>
+                      {' '}
+                      following
+                    </span>
+                  </div>
+                  {!isOwner && session?.data?.user && (
+                    <FollowButton 
+                      username={profile.username!}
+                      isFollowing={profile.isFollowing}
+                      followerCount={profile.followerCount}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </motion.header>
@@ -519,6 +629,10 @@ const NarrativePortfolio = () => {
                 )}
               </div>
             </motion.div>
+          )}
+
+          {profile.blogs && profile.blogs.length > 0 && (
+            <PopularPosts posts={profile.blogs} />
           )}
 
           {profile.yearsOfExperience && (
@@ -632,7 +746,7 @@ const NarrativePortfolio = () => {
         </div>
       </motion.main>
       
-      {!isOwner && <CreatePortfolioPrompt />}
+      {!session?.data?.user && <CreatePortfolioPrompt />}
     </>
   );
 };

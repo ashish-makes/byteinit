@@ -30,8 +30,8 @@ const BlogHeader = async () => {
           </Link>
         </div>
 
-        {/* Search */}
-        <div className="flex-1 max-w-xl">
+        {/* Search - Centered on larger screens */}
+        <div className="flex-1 flex justify-center max-w-2xl mx-auto">
           <SearchBar />
         </div>
 
@@ -134,7 +134,7 @@ const BlogHeader = async () => {
           {!isLoggedIn && (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" className="rounded-full h-9" asChild>
-                <Link href="/login">Log in</Link>
+                <Link href="/auth/login">Log in</Link>
               </Button>
               <Button 
                 size="sm" 

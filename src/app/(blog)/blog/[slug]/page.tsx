@@ -54,9 +54,14 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { ImageZoom } from "@/components/blog/ImageZoom"
 import { ContentImageZoom } from "@/components/blog/ContentImageZoom"
 import { auth } from "@/auth"
-import { recordView, toggleSave, vote } from "@/app/(blog)/blog/actions"
+import { recordView, toggleSave, vote, addComment, deleteComment, editComment, toggleCommentReaction } from "@/app/(blog)/blog/actions"
 import { motion, AnimatePresence } from "framer-motion"
 import { StickyHeaderClient } from "@/components/blog/StickyHeaderClient"
+import { FollowButton } from "@/components/FollowButton"
+import { getFollowStats } from "@/lib/actions/follow"
+import { CommentSection } from "@/components/blog/CommentSection"
+import React from "react"
+import { BlogStats } from "@/components/blog/BlogStats"
 
 // Register languages
 hljs.registerLanguage("javascript", javascript)
@@ -156,13 +161,39 @@ interface BlogPostPageProps {
   params: Promise<{ slug: string }>
 }
 
+// Add this helper type for recursive includes
+type CommentInclude = {
+  user: true;
+  parent: true;
+  replies: {
+    include: CommentInclude;
+  };
+};
+
+// Helper function to create recursive include object
+function createCommentInclude(depth: number = 5): CommentInclude {
+  if (depth === 0) {
+    return {
+      user: true,
+      parent: true,
+      replies: { include: { user: true, parent: true } }
+    } as CommentInclude;
+  }
+  
+  return {
+    user: true,
+    parent: true,
+    replies: {
+      include: createCommentInclude(depth - 1)
+    }
+  };
+}
+
 async function getBlogPost(slug: string) {
   const session = await auth()
   
   const post = await prisma.blog.findUnique({
-    where: {
-      slug,
-    },
+    where: { slug },
     include: {
       user: true,
       _count: {
@@ -182,6 +213,15 @@ async function getBlogPost(slug: string) {
         take: 1,
       } : false,
       votes: true,
+      comments: {
+        include: createCommentInclude(),
+        orderBy: {
+          createdAt: 'desc'
+        },
+        where: {
+          parentId: null
+        }
+      },
     },
   })
 
@@ -293,7 +333,7 @@ const ReadingProgress = ({ readingProgress }: { readingProgress: number }) => (
   </div>
 )
 
-// Add proper type for the blog post
+// Update the BlogPost interface to match the actual data structure
 interface BlogPost {
   id: string
   title: string
@@ -322,24 +362,62 @@ interface BlogPost {
   votes: Array<{ type: 'UP' | 'DOWN' }>
   uniqueViews: number
   tags: string[]
+  comments: Array<{
+    id: string
+    content: string
+    createdAt: Date
+    user: {
+      id: string
+      name: string | null
+      image: string | null
+      username: string | null
+    }
+    reactions: Array<{
+      id: string
+      emoji: string
+      userId: string
+      user: {
+        id: string
+        name: string | null
+        image: string | null
+      }
+    }>
+    parent: { id: string } | null
+    replies: Array<Comment>
+    _count: {
+      reactions: number
+      replies: number
+    }
+  }>
 }
 
 // Add more structured data types
-function generateStructuredData(post: BlogPost) {
+function generateStructuredData(post: {
+  title: string
+  summary: string | null
+  coverImage: string | null
+  createdAt: Date
+  updatedAt: Date
+  user: {
+    name: string | null
+    username: string | null
+  }
+  tags: string[]
+  content: string
+  slug: string
+}) {
   const articleData = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.summary,
     image: post.coverImage ? [post.coverImage] : [],
-    datePublished: post.createdAt.toISOString(), // Convert to ISO string
-    dateModified: post.updatedAt.toISOString(),  // Convert to ISO string
+    datePublished: post.createdAt.toISOString(),
+    dateModified: post.updatedAt.toISOString(),
     author: {
       '@type': 'Person',
       name: post.user.name,
-      url: `https://yoursite.com/u/${post.user.username}`,
-      // Add more author details
-      image: post.user.image || undefined,
+      url: `https://yoursite.com/u/${post.user.username}`
     },
     publisher: {
       '@type': 'Organization',
@@ -359,14 +437,12 @@ function generateStructuredData(post: BlogPost) {
     articleBody: post.content.replace(/<[^>]*>/g, ''),
     wordCount: post.content.split(/\s+/).length,
     articleSection: post.tags[0] || 'Blog',
-    // Add more SEO-friendly fields
     inLanguage: 'en',
     timeRequired: `PT${calculateReadingTime(post.content)}M`,
     isAccessibleForFree: true,
     license: 'https://creativecommons.org/licenses/by/4.0/'
   }
 
-  // Add BreadcrumbList schema
   const breadcrumbData = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -388,7 +464,6 @@ function generateStructuredData(post: BlogPost) {
 
   return [articleData, breadcrumbData]
 }
-
 // Update generateMetadata function
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -489,14 +564,14 @@ export async function generateStaticParams() {
 // Add revalidation
 export const revalidate = 3600 // Revalidate every hour
 
-// Add this function to fetch related posts
-async function getRelatedPosts(currentPost: any) {
+// First, update the getRelatedPosts function to use proper typing
+async function getRelatedPosts(currentPostId: string, userId: string) {
   const relatedPosts = await prisma.blog.findMany({
     where: {
       AND: [
         { published: true },
-        { id: { not: currentPost.id } },
-        { userId: currentPost.userId },
+        { id: { not: currentPostId } },
+        { userId: userId },
       ],
     },
     include: {
@@ -517,14 +592,163 @@ async function getRelatedPosts(currentPost: any) {
   return relatedPosts
 }
 
+// Add this new component
+const CommentSkeleton = () => (
+  <div className="animate-pulse space-y-4">
+    <div className="flex items-start gap-2">
+      <div className="h-8 w-8 rounded-full bg-muted" />
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-24 bg-muted rounded" />
+        <div className="h-12 w-full bg-muted rounded" />
+      </div>
+    </div>
+    {/* Nested reply skeleton */}
+    <div className="ml-8 pl-4 border-l space-y-4">
+      <div className="flex items-start gap-2">
+        <div className="h-6 w-6 rounded-full bg-muted" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-20 bg-muted rounded" />
+          <div className="h-8 w-full bg-muted rounded" />
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+// First define a base comment type without replies
+interface BaseComment {
+  id: string
+  content: string
+  createdAt: Date
+  user: {
+    id: string
+    name: string | null
+    image: string | null
+    username: string | null
+  }
+  reactions: Array<{
+    id: string
+    emoji: string
+    userId: string
+    user: {
+      id: string
+      name: string | null
+      image: string | null
+    }
+  }>
+  parent: { id: string } | null
+  _count: {
+    reactions: number
+    replies: number
+  }
+}
+
+// Rename to avoid conflict with existing Comment type
+interface BlogComment extends BaseComment {
+  replies: BaseComment[]
+}
+
+// First, add this helper function at the top of the file
+function formatCount(count: number): string {
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(1)}M`
+  } else if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}K`
+  }
+  return count.toString()
+}
+
+// Update the formatTagForUrl function to match the blog card format
+function formatTagForUrl(tag: string): string {
+  // Just encode the tag as-is to maintain spaces and special characters
+  return encodeURIComponent(tag)
+}
+
 export default async function BlogPost({ params }: BlogPostPageProps) {
   const { slug } = await params
   const post = await getBlogPost(slug)
   
   if (!post) notFound()
-  
-  // Fetch related posts
-  const relatedPosts = await getRelatedPosts(post)
+
+  // Move the comments query here, after post is defined
+  const comments: BlogComment[] = await prisma.comment.findMany({
+    where: {
+      blogId: post.id,
+      parentId: null,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          username: true,
+        }
+      },
+      parent: {
+        select: {
+          id: true
+        }
+      },
+      reactions: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true
+            }
+          }
+        }
+      },
+      replies: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              username: true,
+            }
+          },
+          parent: {
+            select: {
+              id: true
+            }
+          },
+          reactions: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true
+                }
+              }
+            }
+          },
+          _count: {
+            select: {
+              reactions: true,
+              replies: true
+            }
+          }
+        }
+      },
+      _count: {
+        select: {
+          reactions: true,
+          replies: true
+        }
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+
+  // Update how we fetch related posts
+  const relatedPosts = await getRelatedPosts(post.id, post.userId)
   
   const { toc, content } = generateTableOfContents(post.content)
   const processedContent = processCodeBlocks(content)
@@ -533,6 +757,17 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
   
   // Generate structured data
   const structuredData = generateStructuredData(post)
+
+  const session = await auth()
+  const isOwnProfile = session?.user?.id === post.user.id
+
+  // Get follow stats and status
+  const followStats = await getFollowStats(post.user.id)
+  const isFollowing = session?.user ? 
+    (await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { followingIds: true }
+    }))?.followingIds.includes(post.user.id) : false
 
   return (
     <>
@@ -543,190 +778,214 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      <article className="w-full min-h-screen bg-background" itemScope itemType="https://schema.org/BlogPosting">
-        {/* Add semantic HTML and microdata */}
-        <meta itemProp="headline" content={post.title} />
-        <meta itemProp="description" content={post.summary || ''} />
-        <meta itemProp="author" content={post.user.name || ''} />
-        <meta itemProp="datePublished" content={post.createdAt.toISOString()} />
-        <meta itemProp="dateModified" content={post.updatedAt.toISOString()} />
-        {post.coverImage && <meta itemProp="image" content={post.coverImage} />}
-        
-        {/* Rest of your existing JSX with added semantic markup */}
-        <header className="relative mb-8 px-4 pt-6">
-          <div className="max-w-[900px] mx-auto">
-            <div itemProp="author" itemScope itemType="https://schema.org/Person">
-              {/* Author and Metadata */}
-              <div className="flex items-center justify-between mb-4">
-                <Link 
-                  href={`/u/${post.user.username}`}
-                  className="group flex items-center gap-2 hover:text-foreground"
-                >
-                  <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
-                    <AvatarImage src={post.user.image || ""} alt={post.user.name || ""} />
-                    <AvatarFallback>{post.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium group-hover:text-primary transition-colors">
-                      {post.user.name}
-                    </span>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <ClockIcon className="h-3 w-3" />
-                        <span className="text-xs">{readingTime} min read</span>
-                      </div>
-                      <span>·</span>
-                      <time 
-                        dateTime={publishedDate.toISOString()}
-                        itemProp="datePublished"
-                        className="text-xs"
-                      >
-                        {formatDistanceToNowStrict(publishedDate)} ago
-                      </time>
-                      <span>·</span>
-                      <span className="flex items-center gap-1 text-xs">
-                        <EyeIcon className="h-3 w-3" />
-                        {post.uniqueViews} views
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            </div>
-
-            {/* Title and Summary */}
-            <div className="space-y-3 mb-4">
-              <h1 itemProp="headline" className="text-2xl sm:text-3xl font-semibold tracking-tight">
-                {post.title}
-              </h1>
-              {post.summary && (
-                <p itemProp="description" className="text-base text-muted-foreground leading-relaxed">
-                  {post.summary}
-                </p>
-              )}
-            </div>
-
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1.5 mb-6">
-              {post.tags.map((tag: string) => (
-                <Link 
-                  key={tag} 
-                  href={`/blog/tags/${tag}`}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full 
-                    bg-secondary/40 hover:bg-secondary/60 transition-colors"
-                >
-                  <HashIcon className="h-3 w-3" />
-                  {tag}
-                </Link>
-              ))}
-            </div>
-
-            {/* Cover Image */}
-            {post.coverImage && (
-              <div className="mt-6 relative w-full">
-                <div className="aspect-[2/1] w-full rounded-lg border border-border/50 overflow-hidden">
-                  <ImageZoom 
-                    src={post.coverImage} 
-                    alt={post.title}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </header>
-
-        {/* Table of Contents - Full width with background */}
-        {toc.length > 0 && <TableOfContents toc={toc} />}
-
-        {/* Main content section */}
-        <div itemProp="articleBody" className="px-4 py-6">
-          <div className="max-w-[900px] mx-auto">
-            {/* This component handles the image zoom functionality */}
-            <ContentImageZoom />
-            
-            <div 
-              className="prose prose-neutral dark:prose-invert max-w-none
-                prose-headings:font-semibold
-                prose-h1:text-xl
-                prose-h2:text-lg
-                prose-h3:text-base
-                prose-p:text-sm prose-p:leading-relaxed
-                prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                [&_.highlight-pre]:bg-zinc-950 
-                [&_.highlight-pre]:dark:bg-zinc-900 
-                [&_.highlight-pre]:p-3
-                [&_.highlight-pre]:rounded-xl
-                [&_.highlight-pre]:my-3
-                [&_.highlight-pre]:overflow-x-auto
-                [&_.highlight-pre]:max-w-full
-                [&_.highlight-pre]:break-words
-                [&_.highlight-pre_code]:!bg-transparent 
-                [&_.highlight-pre_code]:text-zinc-50 
-                [&_.highlight-pre_code]:whitespace-pre-wrap
-                [&_.highlight-pre_code]:word-break-all
-                [&_pre]:max-w-full
-                [&_pre]:overflow-x-auto
-                [&_code]:break-all
-                [&_:not(pre)>code]:bg-secondary/30
-                [&_:not(pre)>code]:text-foreground
-                [&_:not(pre)>code]:px-1.5 
-                [&_:not(pre)>code]:py-0.5 
-                [&_:not(pre)>code]:rounded-md
-                [&_:not(pre)>code]:text-xs"
-              dangerouslySetInnerHTML={{ __html: processedContent }}
-            />
-
-            {/* Author Bio */}
-            <div className="mt-6 pt-4 border-t">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={post.user.image || ""} alt={post.user.name || ""} />
-                  <AvatarFallback>{post.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
+      {/* Add max-width container to prevent overflow */}
+      <div className="max-w-screen-xl mx-auto">
+        <article className="w-full min-h-screen bg-background relative" itemScope itemType="https://schema.org/BlogPosting">
+          {/* Add semantic HTML and microdata */}
+          <meta itemProp="headline" content={post.title} />
+          <meta itemProp="description" content={post.summary || ''} />
+          <meta itemProp="author" content={post.user.name || ''} />
+          <meta itemProp="datePublished" content={post.createdAt.toISOString()} />
+          <meta itemProp="dateModified" content={post.updatedAt.toISOString()} />
+          {post.coverImage && <meta itemProp="image" content={post.coverImage} />}
+          
+          {/* Rest of your existing JSX with added semantic markup */}
+          <header className="relative mb-8 px-4 pt-6">
+            <div className="max-w-[900px] mx-auto">
+              <div itemProp="author" itemScope itemType="https://schema.org/Person">
+                {/* Author and Metadata */}
+                <div className="flex items-center justify-between mb-4">
                   <Link 
                     href={`/u/${post.user.username}`}
-                    className="text-sm font-medium hover:underline"
+                    className="group flex items-center gap-2 hover:text-foreground"
                   >
-                    {post.user.name}
+                    <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
+                      <AvatarImage src={post.user.image || ""} alt={post.user.name || ""} />
+                      <AvatarFallback>{post.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                        {post.user.name}
+                      </span>
+                      <BlogStats
+                        followerCount={followStats.followers}
+                        readingTime={readingTime}
+                        views={post.uniqueViews}
+                        publishDate={publishedDate}
+                      />
+                    </div>
                   </Link>
-                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                    {post.user.bio || "No bio available"}
-                  </p>
+
+                  {/* Add Follow Button if not own profile */}
+                  {session?.user && !isOwnProfile && (
+                    <FollowButton 
+                      username={post.user.username!} 
+                      isFollowing={isFollowing ?? false}
+                      followerCount={followStats.followers}
+                    />
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Related Posts */}
-            <div className="mt-6 pt-4 border-t">
-              <h2 className="text-sm font-medium mb-3">More from {post.user.name}</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {relatedPosts.map((relatedPost) => (
+              {/* Title and Summary */}
+              <div className="space-y-3 mb-4">
+                <h1 itemProp="headline" className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                  {post.title}
+                </h1>
+                {post.summary && (
+                  <p itemProp="description" className="text-base text-muted-foreground leading-relaxed">
+                    {post.summary}
+                  </p>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                {post.tags.map((tag: string) => (
                   <Link 
-                    key={relatedPost.id}
-                    href={`/blog/${relatedPost.slug}`} 
-                    className="group block space-y-1.5 rounded-lg border p-3 hover:bg-muted/50"
+                    key={tag} 
+                    href={`/blog/tag/${formatTagForUrl(tag)}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full 
+                      bg-secondary/40 hover:bg-secondary/60 transition-colors"
                   >
-                    <h3 className="line-clamp-2 text-sm font-medium group-hover:underline">
-                      {relatedPost.title}
-                    </h3>
-                    <p className="line-clamp-2 text-xs text-muted-foreground">
-                      {relatedPost.summary || relatedPost.content.slice(0, 100)}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <time dateTime={relatedPost.createdAt.toISOString()}>
-                        {formatDistanceToNowStrict(new Date(relatedPost.createdAt))} ago
-                      </time>
-                      <span>·</span>
-                      <span>{calculateReadingTime(relatedPost.content)} min read</span>
-                    </div>
+                    <HashIcon className="h-3 w-3" />
+                    {tag}
                   </Link>
                 ))}
               </div>
+
+              {/* Cover Image */}
+              {post.coverImage && (
+                <div className="mt-6 relative w-full">
+                  <div className="aspect-[2/1] w-full rounded-lg border border-border/50 overflow-hidden">
+                    <ImageZoom 
+                      src={post.coverImage} 
+                      alt={post.title}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </header>
+
+          {/* Table of Contents - Full width with background */}
+          {toc.length > 0 && <TableOfContents toc={toc} />}
+
+          {/* Main content section - Add overflow-hidden */}
+          <div itemProp="articleBody" className="px-4 py-6 overflow-hidden">
+            <div className="max-w-[900px] mx-auto">
+              {/* This component handles the image zoom functionality */}
+              <ContentImageZoom />
+              
+              <div 
+                className="prose prose-neutral dark:prose-invert max-w-none
+                  prose-headings:font-semibold
+                  prose-h1:text-xl
+                  prose-h2:text-lg
+                  prose-h3:text-base
+                  prose-p:text-sm prose-p:leading-relaxed
+                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                  [&_.highlight-pre]:bg-zinc-950 
+                  [&_.highlight-pre]:dark:bg-zinc-900 
+                  [&_.highlight-pre]:p-3
+                  [&_.highlight-pre]:rounded-xl
+                  [&_.highlight-pre]:my-3
+                  [&_.highlight-pre]:overflow-x-auto
+                  [&_.highlight-pre]:max-w-full
+                  [&_.highlight-pre]:break-words
+                  [&_.highlight-pre_code]:!bg-transparent 
+                  [&_.highlight-pre_code]:text-zinc-50 
+                  [&_.highlight-pre_code]:whitespace-pre-wrap
+                  [&_.highlight-pre_code]:word-break-all
+                  [&_pre]:max-w-full
+                  [&_pre]:overflow-x-auto
+                  [&_code]:break-all
+                  [&_:not(pre)>code]:bg-secondary/30
+                  [&_:not(pre)>code]:text-foreground
+                  [&_:not(pre)>code]:px-1.5 
+                  [&_:not(pre)>code]:py-0.5 
+                  [&_:not(pre)>code]:rounded-md
+                  [&_:not(pre)>code]:text-xs"
+                dangerouslySetInnerHTML={{ __html: processedContent }}
+              />
+
+              {/* Author Bio */}
+              <div className="mt-6 pt-4 border-t">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={post.user.image || ""} alt={post.user.name || ""} />
+                    <AvatarFallback>{post.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <Link 
+                      href={`/u/${post.user.username}`}
+                      className="text-sm font-medium hover:underline"
+                    >
+                      {post.user.name}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                      {post.user.bio || "No bio available"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Related Posts - Only show if there are posts */}
+              {relatedPosts.length > 0 && (
+                <div className="mt-6 pt-4 border-t">
+                  <h2 className="text-sm font-medium mb-3">More from {post.user.name}</h2>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {relatedPosts.map((relatedPost) => (
+                      <Link 
+                        key={relatedPost.id}
+                        href={`/blog/${relatedPost.slug}`} 
+                        className="group block space-y-1.5 rounded-lg border p-3 hover:bg-muted/50"
+                      >
+                        <h3 className="line-clamp-2 text-sm font-medium group-hover:underline">
+                          {relatedPost.title}
+                        </h3>
+                        <p className="line-clamp-2 text-xs text-muted-foreground">
+                          {relatedPost.summary || relatedPost.content.slice(0, 100)}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <time dateTime={relatedPost.createdAt.toISOString()}>
+                            {formatDistanceToNowStrict(new Date(relatedPost.createdAt))} ago
+                          </time>
+                          <span>·</span>
+                          <span>{calculateReadingTime(relatedPost.content)} min read</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Comments Section with Suspense and loading state */}
+              <React.Suspense 
+                fallback={
+                  <div className="mt-8 pt-6 border-t space-y-6">
+                    <h2 className="text-lg font-semibold">Discussion</h2>
+                    <CommentSkeleton />
+                    <CommentSkeleton />
+                    <CommentSkeleton />
+                  </div>
+                }
+              >
+                <CommentSection 
+                  postId={post.id}
+                  comments={comments as any}
+                  commentCount={post._count.comments}
+                  session={session}
+                  onAddComment={addComment}
+                  onDeleteComment={deleteComment}
+                  onEditComment={editComment}
+                  onAddReaction={toggleCommentReaction}
+                />
+              </React.Suspense>
             </div>
           </div>
-        </div>
-      </article>
+        </article>
+      </div>
     </>
   )
 } 

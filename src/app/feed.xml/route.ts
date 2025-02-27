@@ -1,12 +1,13 @@
 import { prisma } from "../../prisma"
 import RSS from 'rss'
+import { siteConfig } from '@/config/site'
 
 export async function GET() {
   const feed = new RSS({
-    title: 'Your Blog Name',
-    description: 'Your blog description',
-    feed_url: 'https://yoursite.com/feed.xml',
-    site_url: 'https://yoursite.com',
+    title: siteConfig.name,
+    description: siteConfig.description,
+    feed_url: `${siteConfig.domain}/feed.xml`,
+    site_url: siteConfig.domain,
     language: 'en',
   })
 
@@ -20,7 +21,7 @@ export async function GET() {
     feed.item({
       title: post.title,
       description: post.summary || '',
-      url: `https://yoursite.com/blog/${post.slug}`,
+      url: `${siteConfig.domain}/blog/${post.slug}`,
       author: post.user?.name || 'Anonymous',
       date: post.createdAt,
     })

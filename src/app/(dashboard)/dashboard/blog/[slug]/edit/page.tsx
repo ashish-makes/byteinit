@@ -239,8 +239,8 @@ export default function EditBlogPost({ params }: { params: Promise<{ slug: strin
               control={form.control}
               render={({ field }) => (
                 <TagInput
-                  value={field.value.join(', ')}
-                  onChange={(value) => field.onChange(value.split(',').map(tag => tag.trim()))}
+                  value={field.value}
+                  onChange={(value) => field.onChange(value)}
                 />
               )}
             />
