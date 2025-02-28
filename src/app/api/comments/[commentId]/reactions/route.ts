@@ -2,6 +2,8 @@ import { auth } from "@/auth"
 import { prisma } from "@/prisma"
 import { NextResponse, NextRequest } from "next/server"
 
+console.log('Route handler registered for /api/comments/[commentId]/reactions')
+
 export async function POST(request: NextRequest, context: any) {
   try {
     const session = await auth()
@@ -10,8 +12,22 @@ export async function POST(request: NextRequest, context: any) {
     }
 
     const { emoji } = await request.json()
-    // Assert that params has the correct shape
-    const { commentId } = context.params as { commentId: string }
+    const { commentId } = context.params
+
+    console.log('Creating reaction:', {
+      commentId,
+      userId: session.user.id,
+      emoji
+    })
+
+    // First verify the comment exists
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId }
+    })
+
+    if (!comment) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 })
+    }
 
     // Check if reaction already exists
     const existingReaction = await prisma.commentReaction.findFirst({
@@ -22,16 +38,19 @@ export async function POST(request: NextRequest, context: any) {
       },
     })
 
+    let result
     if (existingReaction) {
+      console.log('Deleting existing reaction:', existingReaction.id)
       // Remove reaction if it exists
-      await prisma.commentReaction.delete({
+      result = await prisma.commentReaction.delete({
         where: {
           id: existingReaction.id,
         },
       })
     } else {
+      console.log('Creating new reaction')
       // Add new reaction
-      await prisma.commentReaction.create({
+      result = await prisma.commentReaction.create({
         data: {
           emoji,
           userId: session.user.id,
@@ -40,42 +59,34 @@ export async function POST(request: NextRequest, context: any) {
       })
     }
 
-    // Get all reactions for the comment after update
-    const updatedComment = await prisma.comment.findUnique({
-      where: { id: commentId },
+    console.log('Operation result:', result)
+
+    // Get updated reactions with user info
+    const updatedReactions = await prisma.commentReaction.findMany({
+      where: { commentId },
       include: {
-        reactions: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-              },
-            },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
           },
         },
       },
+      orderBy: {
+        createdAt: 'desc'
+      }
     })
 
-    // Return both the reactions array and the count
     return NextResponse.json({
-      reactions:
-        updatedComment?.reactions.map((reaction) => ({
-          id: reaction.id,
-          emoji: reaction.emoji,
-          userId: reaction.userId,
-          user: reaction.user,
-        })) || [],
-      _count: {
-        reactions: updatedComment?.reactions.length || 0,
-      },
+      reactions: updatedReactions,
+      _count: { reactions: updatedReactions.length }
     })
   } catch (error) {
     console.error("Error handling reaction:", error)
-    return NextResponse.json(
-      { error: "Failed to handle reaction" },
-      { status: 500 }
-    )
+    return NextResponse.json({ 
+      error: "Failed to handle reaction",
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 }

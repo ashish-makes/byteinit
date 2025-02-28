@@ -133,9 +133,9 @@ export default async function BlogLayout({
     <div className="min-h-screen">
       <SavedPostsProvider initialSavedPosts={initialSavedPosts}>
         <BlogHeader />
-        <div className="flex pt-14">
+        <div className="flex pt-12">
           {/* Left Sidebar - Desktop Only */}
-          <div className="fixed left-0 top-14 bottom-0 w-60 hidden lg:block border-r bg-background/80 backdrop-blur-sm">
+          <div className="fixed left-0 top-12 bottom-0 w-60 hidden lg:block border-r bg-background/80 backdrop-blur-sm">
             <div className="h-full">
               <LeftSidebarWrapper />
             </div>
@@ -151,7 +151,7 @@ export default async function BlogLayout({
 
           {/* Right Sidebar - Desktop Only */}
           {!isSavedPage && (
-            <div className="fixed right-0 top-14 bottom-0 w-72 hidden lg:block border-l bg-background/80 backdrop-blur-sm">
+            <div className="fixed right-0 top-12 bottom-0 w-72 hidden lg:block border-l bg-background/80 backdrop-blur-sm">
               <div className="h-full">
                 <RightSidebar 
                   trendingPosts={trendingPosts} 

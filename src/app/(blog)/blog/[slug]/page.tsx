@@ -664,88 +664,196 @@ function formatTagForUrl(tag: string): string {
   return encodeURIComponent(tag)
 }
 
+interface CommentUser {
+  id: string;
+  name: string | null;
+  image: string | null;
+  username: string | null;
+}
+
+interface CommentReaction {
+  id: string;
+  emoji: string;
+  userId: string;
+  user: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
+}
+
+interface SerializedComment {
+  id: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  user: CommentUser;
+  reactions: CommentReaction[];
+  replies: SerializedComment[];
+  _count: {
+    reactions: number;
+    replies: number;
+  };
+}
+
+// First, add these type definitions at the top of the file
+interface CommentNode {
+  id: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  parentId: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    username: string | null;
+  };
+  reactions: Array<{
+    id: string;
+    emoji: string;
+    userId: string;
+    user: {
+      id: string;
+      name: string | null;
+      image: string | null;
+    };
+  }>;
+  _count: {
+    reactions: number;
+    replies: number;
+  };
+  replies: CommentNode[];
+}
+
+// Update the getComments function
+async function getComments(postId: string): Promise<SerializedComment[]> {
+  try {
+    console.log('Fetching comments for post:', postId);
+
+    // Get all comments for the post
+    const comments = await prisma.comment.findMany({
+      where: {
+        blogId: postId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            username: true,
+          },
+        },
+        reactions: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              }
+            }
+          }
+        },
+        _count: {
+          select: {
+            reactions: true,
+            replies: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Create a map to store all comments
+    const commentMap = new Map<string, CommentNode>();
+    
+    // First pass: Initialize the map with all comments
+    comments.forEach(comment => {
+      commentMap.set(comment.id, {
+        ...comment,
+        replies: []
+      });
+    });
+
+    // Second pass: Build the comment tree
+    const rootComments: CommentNode[] = [];
+    comments.forEach(comment => {
+      const commentNode = commentMap.get(comment.id)!;
+      
+      if (comment.parentId) {
+        // This is a reply - add it to its parent's replies
+        const parentComment = commentMap.get(comment.parentId);
+        if (parentComment) {
+          parentComment.replies.push(commentNode);
+          // Sort replies by creation date
+          parentComment.replies.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        } else {
+          // If parent not found, treat as root comment
+          rootComments.push(commentNode);
+        }
+      } else {
+        // This is a root comment
+        rootComments.push(commentNode);
+      }
+    });
+
+    // Helper function to serialize a comment node
+    const serializeComment = (comment: CommentNode): SerializedComment => ({
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.createdAt.toISOString(),
+      updatedAt: comment.updatedAt.toISOString(),
+      user: comment.user,
+      reactions: comment.reactions.map(reaction => ({
+        id: reaction.id,
+        emoji: reaction.emoji,
+        userId: reaction.userId,
+        user: reaction.user
+      })),
+      _count: comment._count,
+      replies: comment.replies.map(reply => serializeComment(reply))
+    });
+
+    // Serialize and return the comment tree
+    const serializedComments = rootComments.map(comment => serializeComment(comment));
+
+    console.log('Processed comments:', serializedComments.length);
+    return serializedComments;
+
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    return [];
+  }
+}
+
 export default async function BlogPost({ params }: BlogPostPageProps) {
   const { slug } = await params
   const post = await getBlogPost(slug)
   
   if (!post) notFound()
 
-  // Move the comments query here, after post is defined
-  const comments: BlogComment[] = await prisma.comment.findMany({
-    where: {
-      blogId: post.id,
-      parentId: null,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-          username: true,
-        }
-      },
-      parent: {
-        select: {
-          id: true
-        }
-      },
-      reactions: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true
-            }
-          }
-        }
-      },
-      replies: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-              username: true,
-            }
-          },
-          parent: {
-            select: {
-              id: true
-            }
-          },
-          reactions: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  image: true
-                }
-              }
-            }
-          },
-          _count: {
-            select: {
-              reactions: true,
-              replies: true
-            }
-          }
-        }
-      },
-      _count: {
-        select: {
-          reactions: true,
-          replies: true
-        }
-      }
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
+  console.log('Post details:', {
+    id: post.id,
+    commentCount: post._count.comments
   });
+
+  const comments = await getComments(post.id);
+  console.log('Comments returned:', comments.length);
+
+  const session = await auth()
 
   // Update how we fetch related posts
   const relatedPosts = await getRelatedPosts(post.id, post.userId)
@@ -758,7 +866,6 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
   // Generate structured data
   const structuredData = generateStructuredData(post)
 
-  const session = await auth()
   const isOwnProfile = session?.user?.id === post.user.id
 
   // Get follow stats and status
@@ -960,28 +1067,29 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
                 </div>
               )}
 
-              {/* Comments Section with Suspense and loading state */}
-              <React.Suspense 
-                fallback={
-                  <div className="mt-8 pt-6 border-t space-y-6">
-                    <h2 className="text-lg font-semibold">Discussion</h2>
-                    <CommentSkeleton />
-                    <CommentSkeleton />
-                    <CommentSkeleton />
-                  </div>
-                }
-              >
-                <CommentSection 
-                  postId={post.id}
-                  comments={comments as any}
-                  commentCount={post._count.comments}
-                  session={session}
-                  onAddComment={addComment}
-                  onDeleteComment={deleteComment}
-                  onEditComment={editComment}
-                  onAddReaction={toggleCommentReaction}
-                />
-              </React.Suspense>
+              {/* Comments Section - removed border-t */}
+              <div className="mt-12 pt-6"> {/* Removed border-t */}
+                {/* Comments Section with Suspense and loading state */}
+                <React.Suspense 
+                  fallback={
+                    <div className="space-y-6">
+                      <h2 className="text-lg font-semibold">Discussion ({post._count.comments})</h2>
+                      <CommentSkeleton />
+                    </div>
+                  }
+                >
+                  <CommentSection 
+                    postId={post.id}
+                    comments={comments}
+                    commentCount={post._count.comments}
+                    session={session}
+                    onAddComment={addComment}
+                    onDeleteComment={deleteComment}
+                    onEditComment={editComment}
+                    onAddReaction={toggleCommentReaction}
+                  />
+                </React.Suspense>
+              </div>
             </div>
           </div>
         </article>

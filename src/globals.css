@@ -76,3 +76,12 @@ body {
   50% { transform: scale(1.2); }
   100% { transform: scale(1); }
 }
+
+/* Add this to your global.css */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: none;
+}

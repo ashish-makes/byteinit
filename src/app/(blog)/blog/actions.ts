@@ -462,27 +462,63 @@ export async function savePost(postId: string) {
   }
 }
 
-export async function addComment(blogId: string, content: string, parentId?: string) {
-  const session = await auth()
+export async function addComment(postId: string, content: string, parentId?: string) {
+  const session = await auth();
   if (!session?.user?.id) {
-    return { error: "Please sign in to comment" }
+    return { error: "Please sign in to comment" };
   }
 
   try {
-    await prisma.comment.create({
+    const comment = await prisma.comment.create({
       data: {
         content,
-        blogId,
         userId: session.user.id,
-        parentId: parentId || null,
+        blogId: postId,
+        parentId
       },
-    })
+      include: {
+        user: true,
+        reactions: {
+          include: {
+            user: true
+          }
+        },
+        _count: {
+          select: {
+            reactions: true,
+            replies: true
+          }
+        }
+      }
+    });
 
-    revalidatePath('/blog/[slug]')
-    return { success: true }
+    const serializedComment = {
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.createdAt.toISOString(),
+      updatedAt: comment.updatedAt.toISOString(),
+      user: {
+        id: comment.user.id,
+        name: comment.user.name,
+        image: comment.user.image,
+        username: comment.user.username
+      },
+      reactions: [],
+      replies: [],
+      _count: {
+        reactions: 0,
+        replies: 0
+      }
+    };
+
+    revalidatePath('/blog/[slug]', 'page');
+    return { 
+      success: true, 
+      comment: serializedComment
+    };
   } catch (error) {
-    console.error('Error adding comment:', error)
-    return { error: "Failed to add comment" }
+    console.error('Error adding comment:', error);
+    return { error: "Failed to add comment" };
   }
 }
 
@@ -579,21 +615,74 @@ export async function editComment(commentId: string, content: string) {
 
 export async function toggleCommentReaction(commentId: string, emoji: string) {
   try {
-    const response = await fetch(`/api/comments/${commentId}/reactions`, {
-      method: 'POST',
-      body: JSON.stringify({ emoji })
-    });
-    const data = await response.json();
+    const session = await auth()
+    if (!session?.user) {
+      return { error: 'Unauthorized' }
+    }
+
+    const existingReaction = await prisma.commentReaction.findFirst({
+      where: {
+        commentId,
+        userId: session.user.id,
+        emoji
+      }
+    })
+
+    if (existingReaction) {
+      await prisma.commentReaction.delete({
+        where: { id: existingReaction.id }
+      })
+    } else {
+      await prisma.commentReaction.create({
+        data: {
+          emoji,
+          commentId,
+          userId: session.user.id
+        }
+      })
+    }
+
+    // Fetch updated reactions
+    const updatedComment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      select: {
+        reactions: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true
+              }
+            }
+          }
+        },
+        _count: {
+          select: {
+            reactions: true
+          }
+        }
+      }
+    })
+
+    if (!updatedComment) {
+      throw new Error('Comment not found')
+    }
+
     return {
-      reactions: data.reactions,
-      _count: { reactions: data._count.reactions }
-    };
+      reactions: updatedComment.reactions.map(reaction => ({
+        id: reaction.id,
+        emoji: reaction.emoji,
+        userId: reaction.userId,
+        user: reaction.user
+      })),
+      _count: {
+        reactions: updatedComment._count.reactions
+      }
+    }
   } catch (error) {
-    console.error('Error:', error);
-    return {
-      reactions: [],
-      _count: { reactions: 0 }
-    };
+    console.error('Error toggling reaction:', error)
+    return { error: 'Failed to toggle reaction' }
   }
 }
 
