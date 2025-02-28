@@ -14,6 +14,8 @@ import { FeaturedPostsSkeleton } from "./FeaturedPostsSkeleton"
 import { BlogCardSkeleton } from "./BlogCardSkeleton"
 import { getBlogPosts } from "@/app/(blog)/blog/actions"
 import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useRouter } from "next/navigation"
 
 // Define Post type for better type safety
 interface Post {
@@ -78,8 +80,19 @@ const filterCategories = {
   },
 }
 
-export default function BlogList() {
-  const [activeSection, setActiveSection] = useState<"hot" | "latest" | "popular" | null>("hot")
+// Update the section type to include "following"
+type BlogListSection = "featured" | "latest" | "popular" | "hot" | "best" | "following";
+
+interface BlogListProps {
+  section?: BlogListSection;
+  tag?: string;
+  topic?: string;
+  userId?: string;
+}
+
+export default function BlogList({ section = "latest", tag, topic, userId }: BlogListProps) {
+  const router = useRouter()
+  const [activeSection, setActiveSection] = useState<BlogListSection | null>(section)
   const [posts, setPosts] = useState<Post[]>([])
   const [featured, setFeatured] = useState<Post[]>([])
   const [activeFilters, setActiveFilters] = useState({
@@ -89,7 +102,7 @@ export default function BlogList() {
     difficulty: [] as string[],
   })
   const [isScrolled, setIsScrolled] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const header = document.getElementById("sticky-header")
@@ -110,21 +123,21 @@ export default function BlogList() {
   }, [])
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    async function fetchPosts() {
+      setIsLoading(true)
       try {
-        setLoading(true)
-        const data = await getBlogPosts(activeSection)
+        const data = await getBlogPosts(section, topic)
         setPosts(data.items)
-        setFeatured(data.featured)
+        setFeatured(section === 'hot' && !topic ? data.featured : [])
       } catch (error) {
-        console.error('Failed to fetch posts:', error)
+        console.error('Error fetching posts:', error)
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
 
     fetchPosts()
-  }, [activeSection])
+  }, [section, topic])
 
   const handleFilterToggle = (
     category: keyof typeof activeFilters,
@@ -154,12 +167,43 @@ export default function BlogList() {
     }, 0)
   }
 
+  const handleSectionChange = (newSection: BlogListSection) => {
+    if (window.location.pathname === '/blog') {
+      router.push(`/blog/${newSection}`)
+    } else {
+      setActiveSection(newSection)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 py-6">
+        {section === "hot" && <FeaturedPostsSkeleton />}
+        <AnimatePresence mode="sync">
+          <motion.div className="grid gap-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <motion.div
+                key={`skeleton-${index}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <BlogCardSkeleton />
+              </motion.div>
+            ))}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full">
       {/* Show featured posts only on hot section */}
       {activeSection === "hot" && (
         <AnimatePresence>
-          {loading ? (
+          {isLoading ? (
             <FeaturedPostsSkeleton />
           ) : (
             <motion.div
@@ -194,6 +238,8 @@ export default function BlogList() {
               { id: "hot", icon: Flame, label: "Hot" },
               { id: "latest", icon: Clock, label: "Latest" },
               { id: "popular", icon: TrendingUp, label: "Popular" },
+              // Add following section if needed in the UI
+              // { id: "following", icon: Users, label: "Following" },
             ].map((section) => (
               <motion.div
                 key={section.id}
@@ -208,7 +254,7 @@ export default function BlogList() {
                       ? "bg-background shadow-sm text-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
-                  onClick={() => setActiveSection(section.id as typeof activeSection)}
+                  onClick={() => handleSectionChange(section.id as BlogListSection)}
                 >
                   <section.icon className="h-3 w-3" />
                   <span className="font-medium">{section.label}</span>
@@ -296,7 +342,7 @@ export default function BlogList() {
       {/* Posts Grid */}
       <motion.div className="grid gap-3 p-3">
         <AnimatePresence mode="sync">
-          {loading ? (
+          {isLoading ? (
             // Skeleton loading state
             <motion.div className="grid gap-3">
               {Array.from({ length: 6 }).map((_, index) => (
@@ -329,6 +375,15 @@ export default function BlogList() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {posts.length === 0 && (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium">No posts found</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Check back later for new content
+          </p>
+        </div>
+      )}
     </div>
   )
 }

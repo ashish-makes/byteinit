@@ -1,12 +1,10 @@
 import React from 'react';
 import BlogList from '@/components/blog/BlogList';
 
-const BlogPage = async () => {
+export default function BlogPage() {
   return (
     <div className="w-full max-w-none">
-      <BlogList />
+      <BlogList section="hot" />
     </div>
   );
-};
-
-export default BlogPage;
+}

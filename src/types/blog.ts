@@ -1,0 +1,1 @@
+export type BlogListSection = "featured" | "latest" | "popular" | "hot" | "best" | "following"; 

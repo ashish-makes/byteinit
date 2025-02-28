@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ArrowUp, MessageSquare, Bookmark } from "lucide-react"
+import { ArrowUp, MessageSquare, Bookmark, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -43,12 +43,14 @@ interface FeaturedPostsProps {
 }
 
 export function FeaturedPosts({ posts }: FeaturedPostsProps) {
+  if (!posts.length) return null
+
   return (
     <motion.section 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="w-full border-b bg-accent/5"
+      className="w-full border-b bg-accent/5 mb-6"
     >
       <div className="py-4 sm:py-6 px-3 sm:px-4">
         <motion.div 
@@ -58,8 +60,11 @@ export function FeaturedPosts({ posts }: FeaturedPostsProps) {
           className="flex items-center justify-between mb-3 sm:mb-4"
         >
           <h2 className="text-base sm:text-lg font-semibold">Featured Articles</h2>
-          <Button variant="ghost" size="sm" className="text-muted-foreground h-8">
-            View all
+          <Button variant="ghost" size="sm" asChild className="text-muted-foreground h-8">
+            <Link href="/blog/featured" className="flex items-center gap-1">
+              View all
+              <ArrowRight className="h-3 w-3" />
+            </Link>
           </Button>
         </motion.div>
         

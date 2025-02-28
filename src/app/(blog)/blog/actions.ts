@@ -3,6 +3,7 @@
 import { prisma } from "@/prisma"
 import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
+import { categorizeTopic } from '@/lib/topicMatcher'
 
 export async function toggleLike(blogId: string) {
   const session = await auth()
@@ -150,37 +151,127 @@ export async function recordView(blogId: string) {
   }
 }
 
-export async function getBlogPosts(section: "hot" | "latest" | "popular" | null = 'hot') {
+export async function getBlogPosts(
+  section: "hot" | "latest" | "popular" | "best" | "featured" | "following" | null = null,
+  topic?: string
+) {
   try {
-    console.log('Fetching posts for section:', section)
+    const session = await auth();
     
     const baseWhere = {
       published: true,
+      ...(topic ? {
+        OR: [
+          {
+            tags: {
+              hasSome: [
+                topic.toLowerCase(),
+                topic.toUpperCase(),
+                topic.charAt(0).toUpperCase() + topic.slice(1).toLowerCase()
+              ]
+            }
+          },
+          {
+            AND: [
+              {
+                OR: [
+                  { title: { contains: topic, mode: 'insensitive' as const } },
+                  { content: { contains: topic, mode: 'insensitive' as const } },
+                  // Special case for AI
+                  ...(topic === 'artificial-intelligence' ? [
+                    { title: { contains: 'ai', mode: 'insensitive' as const } },
+                    { content: { contains: 'ai', mode: 'insensitive' as const } },
+                    { title: { contains: 'a.i', mode: 'insensitive' as const } },
+                    { content: { contains: 'a.i', mode: 'insensitive' as const } }
+                  ] : [])
+                ]
+              }
+            ]
+          }
+        ]
+      } : {}),
+      ...(section === 'following' && session?.user?.id ? {
+        userId: {
+          in: await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { followingIds: true }
+          }).then(user => user?.followingIds || [])
+        }
+      } : {})
     }
 
-    // Get posts based on section
+    let orderBy: any;
+    
+    switch (section) {
+      case 'featured':
+        return {
+          items: await prisma.blog.findMany({
+            where: {
+              ...baseWhere,
+              createdAt: {
+                gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+              }
+            },
+            orderBy: [
+              { votes: { _count: 'desc' as const }},
+              { comments: { _count: 'desc' as const }},
+              { views: { _count: 'desc' as const }}
+            ],
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  image: true,
+                  username: true,
+                }
+              },
+              _count: {
+                select: {
+                  votes: true,
+                  comments: true,
+                  saves: true,
+                  views: true,
+                }
+              },
+              votes: true,
+              saves: true,
+            },
+            take: 20,
+          }),
+          featured: []
+        }
+      case 'latest':
+        orderBy = { createdAt: 'desc' as const };
+        break;
+      case 'popular':
+        orderBy = [
+          { views: { _count: 'desc' as const }},
+          { createdAt: 'desc' as const }
+        ];
+        break;
+      case 'best':
+        orderBy = [
+          { votes: { _count: 'desc' as const }},
+          { createdAt: 'desc' as const }
+        ];
+        break;
+      case 'hot':
+      case 'following':
+        orderBy = [
+          { createdAt: 'desc' as const }
+        ];
+        break;
+      default:
+        orderBy = [
+          { votes: { _count: 'desc' as const }},
+          { createdAt: 'desc' as const }
+        ];
+    }
+
     const [posts, featured] = await Promise.all([
       prisma.blog.findMany({
         where: baseWhere,
-        orderBy: section === 'latest' 
-          ? { createdAt: 'desc' }
-          : section === 'popular'
-          ? [
-              {
-                views: {
-                  _count: 'desc',
-                },
-              },
-              { createdAt: 'desc' },
-            ]
-          : [ // hot (default)
-              {
-                votes: {
-                  _count: 'desc',
-                },
-              },
-              { createdAt: 'desc' },
-            ],
+        orderBy,
         include: {
           user: {
             select: {
@@ -202,30 +293,18 @@ export async function getBlogPosts(section: "hot" | "latest" | "popular" | null 
         },
         take: 20,
       }),
-      // Featured posts - most engaged posts in the last week
-      prisma.blog.findMany({
+      // Featured posts
+      section === 'hot' ? prisma.blog.findMany({
         where: {
           ...baseWhere,
           createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
           }
         },
         orderBy: [
-          {
-            votes: {
-              _count: 'desc',
-            },
-          },
-          {
-            comments: {
-              _count: 'desc',
-            },
-          },
-          {
-            views: {
-              _count: 'desc',
-            },
-          },
+          { votes: { _count: 'desc' } },
+          { comments: { _count: 'desc' } },
+          { views: { _count: 'desc' } }
         ],
         include: {
           user: {
@@ -247,15 +326,12 @@ export async function getBlogPosts(section: "hot" | "latest" | "popular" | null 
           saves: true,
         },
         take: 6,
-      })
+      }) : Promise.resolve([])
     ])
-
-    console.log('Found posts:', posts.length)
-    console.log('Sample post:', posts[0])
 
     return {
       items: posts,
-      featured,
+      featured: section === 'hot' ? featured : []
     }
   } catch (error) {
     console.error('[GET_BLOG_POSTS] Error:', error)
@@ -518,5 +594,75 @@ export async function toggleCommentReaction(commentId: string, emoji: string) {
       reactions: [],
       _count: { reactions: 0 }
     };
+  }
+}
+
+export async function createPost(data: any) {
+  try {
+    const { title, content, tags = [] } = data;
+    
+    // Auto-categorize the post
+    const autoTags = categorizeTopic(title, content, tags);
+    const finalTags = [...new Set([...tags, ...autoTags])];
+
+    const post = await prisma.blog.create({
+      data: {
+        ...data,
+        tags: finalTags
+      }
+    });
+
+    return post;
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+}
+
+export async function toggleFollow(userIdToFollow: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: "Please sign in to follow users" }
+  }
+
+  try {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { followingIds: true }
+    })
+
+    if (!currentUser) {
+      return { error: "User not found" }
+    }
+
+    const isFollowing = currentUser.followingIds.includes(userIdToFollow)
+
+    // Update both users' following/follower lists
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        followingIds: isFollowing
+          ? { set: currentUser.followingIds.filter(id => id !== userIdToFollow) }
+          : { push: userIdToFollow }
+      }
+    })
+
+    await prisma.user.update({
+      where: { id: userIdToFollow },
+      data: {
+        followerIds: isFollowing
+          ? { set: (await prisma.user.findUnique({
+              where: { id: userIdToFollow },
+              select: { followerIds: true }
+            }))?.followerIds.filter(id => id !== session.user.id) || [] }
+          : { push: session.user.id }
+      }
+    })
+
+    revalidatePath('/blog/following')
+    return { success: true, isFollowing: !isFollowing }
+  } catch (error) {
+    console.error('Error toggling follow:', error)
+    return { error: "Failed to update follow status" }
   }
 } 

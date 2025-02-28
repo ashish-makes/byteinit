@@ -24,9 +24,15 @@ import {
   Globe,
   Brain,
   Cpu,
+  Smartphone,
   Cloud,
+  Shield,
+  Database,
+  Users,
+  Settings,
   HelpCircle,
   History,
+  Rss
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -39,9 +45,13 @@ const MobileNav = () => {
   
   const mainNav = [
     { icon: Home, label: 'Home', href: '/blog' },
+  ];
+
+  const discoverNav = [
     { icon: Flame, label: 'Popular', href: '/blog/popular' },
     { icon: Newspaper, label: 'Latest', href: '/blog/latest' },
     { icon: Sparkles, label: 'Best', href: '/blog/best' },
+    { icon: Users, label: 'Following', href: '/blog/following' },
   ];
 
   const personalNav = [
@@ -56,10 +66,19 @@ const MobileNav = () => {
 
   const topics = [
     { icon: Code2, label: 'Programming', href: '/blog/topic/programming' },
-    { icon: Globe, label: 'Web Dev', href: '/blog/topic/web-dev' },
-    { icon: Brain, label: 'AI & ML', href: '/blog/topic/ai-ml' },
-    { icon: Cpu, label: 'Systems', href: '/blog/topic/systems' },
-    { icon: Cloud, label: 'Cloud', href: '/blog/topic/cloud' },
+    { icon: Globe, label: 'Web Development', href: '/blog/topic/web-development' },
+    { icon: Brain, label: 'Machine Learning', href: '/blog/topic/machine-learning' },
+    { icon: Cpu, label: 'AI', href: '/blog/topic/artificial-intelligence' },
+    { icon: Smartphone, label: 'Mobile Dev', href: '/blog/topic/mobile-development' },
+    { icon: Cloud, label: 'Cloud', href: '/blog/topic/cloud-computing' },
+    { icon: Shield, label: 'Security', href: '/blog/topic/security' },
+    { icon: Database, label: 'Databases', href: '/blog/topic/databases' },
+  ];
+
+  const helpNav = [
+    { icon: HelpCircle, label: 'Help Center', href: '/help' },
+    { icon: Settings, label: 'Settings', href: '/dashboard/profile' },
+    { icon: Rss, label: 'RSS Feed', href: '/feed.xml' },
   ];
   
   const NavItem = ({ 
@@ -77,8 +96,8 @@ const MobileNav = () => {
       <div className={cn(
         "group flex items-center gap-3 px-3 py-2 transition-colors rounded-md",
         pathname === href 
-          ? "bg-secondary text-secondary-foreground font-medium" 
-          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+          ? "bg-accent text-accent-foreground font-medium" 
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
       )}>
         <Icon className="h-4 w-4" />
         <span className="flex-1 text-sm">{label}</span>
@@ -92,6 +111,30 @@ const MobileNav = () => {
         )}
       </div>
     </Link>
+  );
+
+  const NavSection = ({ 
+    title, 
+    items 
+  }: { 
+    title?: string
+    items: Array<{
+      icon: React.ElementType
+      label: string
+      href: string
+      count?: number
+    }>
+  }) => (
+    <div className="space-y-1">
+      {title && (
+        <h4 className="px-3 text-xs font-semibold tracking-wider text-muted-foreground/70 mb-1">
+          {title}
+        </h4>
+      )}
+      {items.map((item) => (
+        <NavItem key={item.href} {...item} />
+      ))}
+    </div>
   );
 
   return (
@@ -131,45 +174,31 @@ const MobileNav = () => {
         <ScrollArea className="h-[calc(100vh-56px)]">
           <div className="p-3 space-y-4">
             {/* Main Navigation */}
-            <div>
-              <div className="space-y-1">
-                {mainNav.map((item) => (
-                  <NavItem key={item.href} {...item} />
-                ))}
-              </div>
-            </div>
+            <NavSection items={mainNav} />
 
-            <Separator />
+            <Separator className="mx-1 opacity-50" />
+
+            {/* Discover Navigation */}
+            <NavSection title="DISCOVER" items={discoverNav} />
+
+            <Separator className="mx-1 opacity-50" />
 
             {/* Personal Navigation */}
-            <div>
-              <div className="space-y-1">
-                {personalNav.map((item) => (
-                  <NavItem key={item.href} {...item} />
-                ))}
-              </div>
-            </div>
+            <NavSection title="PERSONAL" items={personalNav} />
 
-            <Separator />
+            <Separator className="mx-1 opacity-50" />
 
             {/* Topics Section */}
-            <div>
-              <h3 className="mb-2 px-3 text-xs font-medium text-muted-foreground">TOPICS</h3>
-              <div className="space-y-1">
-                {topics.map((item) => (
-                  <NavItem key={item.href} {...item} />
-                ))}
-              </div>
-            </div>
+            <NavSection title="TOPICS" items={topics} />
 
-            <Separator />
+            <Separator className="mx-1 opacity-50" />
+
+            {/* Help & Settings */}
+            <NavSection title="HELP & SETTINGS" items={helpNav} />
 
             {/* Footer */}
-            <div>
-              <NavItem icon={HelpCircle} label="Help Center" href="/help" />
-              <div className="px-3 py-3 mt-4">
-                <p className="text-xs text-muted-foreground">© 2024 ByteInit</p>
-              </div>
+            <div className="px-3 py-3 mt-4">
+              <p className="text-xs text-muted-foreground">© 2024 ByteInit</p>
             </div>
           </div>
         </ScrollArea>

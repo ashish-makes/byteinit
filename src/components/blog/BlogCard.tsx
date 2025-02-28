@@ -3,11 +3,17 @@
 import React from "react"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
-import { Clock, MessageSquare } from "lucide-react"
+import { Clock, MessageSquare, MoreHorizontal } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { BlogPostActions } from "./BlogPostActions"
 import { formatDistanceToNow, format } from "date-fns"
 import { toast } from "sonner"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface BlogCardProps {
   post: {
@@ -69,7 +75,7 @@ export default function BlogCard({ post }: BlogCardProps) {
           onUnauthenticated={handleUnauthenticatedAction}
         />
 
-        <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex-1 min-w-0 space-y-2">
           <Link href={`/blog/${post.slug}`} className="group">
             <h2 className="text-base font-medium group-hover:text-primary transition-colors line-clamp-1">
               {post.title}
@@ -80,19 +86,26 @@ export default function BlogCard({ post }: BlogCardProps) {
             {post.summary || stripHtml(post.content)}
           </p>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {/* Metadata - Desktop */}
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
             <Avatar className="h-5 w-5">
               <AvatarImage src={post.user?.image || undefined} />
               <AvatarFallback>{post.user?.name?.[0]}</AvatarFallback>
             </Avatar>
-            <span>{post.user?.name}</span>
+            <span className="truncate">{post.user?.name}</span>
             <span>•</span>
-            <time 
-              dateTime={post.createdAt.toISOString()}
-              title={formatDate(post.createdAt).full}
-            >
-              {formatDate(post.createdAt).relative}
-            </time>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <time dateTime={post.createdAt.toISOString()}>
+                    {formatDate(post.createdAt).relative}
+                  </time>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {formatDate(post.createdAt).full}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <span>•</span>
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -105,25 +118,70 @@ export default function BlogCard({ post }: BlogCardProps) {
             </div>
           </div>
 
+          {/* Metadata - Mobile */}
+          <div className="flex sm:hidden items-center flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 min-w-fit">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={post.user?.image || undefined} />
+                <AvatarFallback>{post.user?.name?.[0]}</AvatarFallback>
+              </Avatar>
+              <span className="truncate">{post.user?.name}</span>
+            </div>
+            <span>•</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <time dateTime={post.createdAt.toISOString()}>
+                    {formatDate(post.createdAt).relative}
+                  </time>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {formatDate(post.createdAt).full}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <span>•</span>
+            <span>{calculateReadingTime(post.content)}</span>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              <span>{post._count.comments}</span>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between pt-2">
-            <div className="flex flex-wrap gap-1">
-              {post.tags.slice(0, 10).map((tag) => (
+            <div className="flex flex-wrap gap-1 max-w-[85%]">
+              {post.tags.slice(0, 7).map((tag) => (
                 <Link
                   key={tag}
                   href={`/blog/tag/${tag}`}
-                  className="text-xs px-2 py-0.5 bg-secondary/50 rounded-full hover:bg-secondary/80 transition-colors"
+                  className="text-xs px-2 py-0.5 bg-secondary/50 rounded-full hover:bg-secondary/80 transition-colors truncate"
                 >
                   #{tag}
                 </Link>
               ))}
+              {post.tags.length > 7 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="text-xs px-2 py-0.5 bg-secondary/50 rounded-full hover:bg-secondary/80 transition-colors">
+                      <MoreHorizontal className="h-3 w-3" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {post.tags.slice(7).map((tag) => (
+                          <span key={tag} className="text-xs">#{tag}</span>
+                        ))}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             <BlogPostActions.Secondary 
               post={post} 
               onUnauthenticated={handleUnauthenticatedAction}
             />
           </div>
-
-
         </div>
       </div>
     </Card>
