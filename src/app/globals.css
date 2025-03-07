@@ -170,3 +170,14 @@ em-emoji-picker {
 .dropdown-menu-separator {
   @apply -mx-1 my-1 h-px bg-muted;
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

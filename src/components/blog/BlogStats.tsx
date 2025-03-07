@@ -14,67 +14,33 @@ function formatCount(count: number): string {
   return count.toString()
 }
 
-interface BlogStatsProps {
+export const BlogStats = ({
+  followerCount,
+  readingTime,
+  views,
+  publishDate
+}: {
   followerCount: number
   readingTime: number
   views: number
   publishDate: Date
-}
-
-export function BlogStats({ 
-  followerCount: initialFollowerCount,
-  readingTime,
-  views,
-  publishDate
-}: BlogStatsProps) {
-  const [followers, setFollowers] = useState(initialFollowerCount)
-
-  // Subscribe to follower count changes
-  useEffect(() => {
-    const channel = new BroadcastChannel('follower-update')
-    
-    channel.onmessage = (event) => {
-      if (event.data.type === 'FOLLOWER_UPDATE') {
-        setFollowers(event.data.count)
-      }
-    }
-
-    return () => channel.close()
-  }, [])
-
-  return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      <div className="flex items-center gap-1">
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={followers}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {formatCount(followers)}
-          </motion.span>
-        </AnimatePresence>
-        <span>{followers === 1 ? 'follower' : 'followers'}</span>
+}) => (
+  <div className="relative max-w-full">
+    {/* Container with fade effect */}
+    <div className="relative">
+      {/* Fade effect overlay - right side only */}
+      <div className="absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-background to-transparent z-10" />
+      
+      {/* Scrollable content */}
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground overflow-x-auto no-scrollbar pr-4">
+        <span className="whitespace-nowrap">{followerCount} {followerCount === 1 ? 'follower' : 'followers'}</span>
+        <span>•</span>
+        <span className="whitespace-nowrap">{readingTime} min read</span>
+        <span>•</span>
+        <span className="whitespace-nowrap">{views} {views === 1 ? 'view' : 'views'}</span>
+        <span>•</span>
+        <span className="whitespace-nowrap">{formatDistanceToNowStrict(publishDate)} ago</span>
       </div>
-      <span>•</span>
-      <div className="flex items-center gap-1">
-        <ClockIcon className="h-3 w-3" />
-        <span>{readingTime} min read</span>
-      </div>
-      <span>•</span>
-      <div className="flex items-center gap-1">
-        <EyeIcon className="h-3 w-3" />
-        <span>{formatCount(views)} views</span>
-      </div>
-      <span>•</span>
-      <time 
-        dateTime={publishDate.toISOString()}
-        itemProp="datePublished"
-      >
-        {formatDistanceToNowStrict(publishDate)} ago
-      </time>
     </div>
-  )
-} 
+  </div>
+) 

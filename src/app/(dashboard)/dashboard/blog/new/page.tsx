@@ -103,32 +103,71 @@ const ImageUpload = ({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup function for timeouts
+  useEffect(() => {
+    return () => {
+      if (uploadTimeoutRef.current) {
+        clearTimeout(uploadTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleFile = async (file: File) => {
-    if (file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    try {
       setIsUploading(true)
       setUploadProgress(0)
-      
-      // Simulate upload progress
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval)
-            return 100
-          }
-          return prev + 10
-        })
-      }, 100)
 
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Create a blob URL immediately for preview
+      const previewUrl = URL.createObjectURL(file)
+      onChange(previewUrl)
+
+      // Simulate progress more naturally
+      const startTime = Date.now()
+      const duration = 1000 // 1 second upload simulation
       
-      const url = URL.createObjectURL(file)
-      onChange(url)
+      const updateProgress = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min((elapsed / duration) * 100, 90) // Cap at 90% until actual upload
+        setUploadProgress(progress)
+        
+        if (progress < 90) {
+          uploadTimeoutRef.current = setTimeout(updateProgress, 100)
+        }
+      }
       
-      // Cleanup
+      updateProgress()
+
+      // Simulate network delay based on file size
+      const delay = Math.min(file.size / 10000, 2000) // Max 2 seconds delay
+      await new Promise(resolve => setTimeout(resolve, delay))
+
+      // Complete the upload
+      setUploadProgress(100)
+      
+      // Clear any remaining timeouts
+      if (uploadTimeoutRef.current) {
+        clearTimeout(uploadTimeoutRef.current)
+      }
+
+      // Reset state after a brief delay
+      setTimeout(() => {
+        setIsUploading(false)
+        setUploadProgress(0)
+      }, 500)
+
+    } catch (error) {
+      console.error('Error handling file:', error)
+      toast.error('Failed to process image')
       setIsUploading(false)
       setUploadProgress(0)
+      onRemove() // Remove the preview if upload failed
     }
   }
 
@@ -143,7 +182,7 @@ const ImageUpload = ({
           e.preventDefault()
           setIsDragging(false)
           const file = e.dataTransfer.files[0]
-          await handleFile(file)
+          if (file) await handleFile(file)
         }}
         className={cn(
           "relative h-[200px] rounded-lg overflow-hidden border-2 border-dashed transition-colors",
@@ -175,7 +214,7 @@ const ImageUpload = ({
           <div className="flex flex-col items-center gap-3 w-full max-w-[200px]">
             <Progress value={uploadProgress} className="h-1 w-full" />
             <p className="text-sm text-muted-foreground">
-              Uploading... {uploadProgress}%
+              {uploadProgress === 100 ? 'Processing...' : `Uploading... ${Math.round(uploadProgress)}%`}
             </p>
           </div>
         ) : (

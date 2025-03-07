@@ -2,10 +2,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import { Filter, Flame, Clock, TrendingUp, X } from "lucide-react"
+import { Flame, Clock, TrendingUp } from "lucide-react"
 import BlogCard from "./BlogCard"
 import { useState, useEffect } from "react"
 import { FeaturedPosts } from "./FeaturedPosts"
@@ -41,45 +38,6 @@ interface Post {
   tags: string[]
 }
 
-const filterCategories = {
-  timeRange: {
-    label: "Time Range",
-    options: [
-      { value: "today", label: "Last 24 hours" },
-      { value: "week", label: "Past week" },
-      { value: "month", label: "Past month" },
-      { value: "year", label: "Past year" },
-      { value: "all", label: "All time" },
-    ],
-  },
-  tags: {
-    label: "Topics",
-    options: [
-      { value: "react", label: "React" },
-      { value: "nextjs", label: "Next.js" },
-      { value: "typescript", label: "TypeScript" },
-      { value: "javascript", label: "JavaScript" },
-      { value: "css", label: "CSS" },
-    ],
-  },
-  readTime: {
-    label: "Read Time",
-    options: [
-      { value: "short", label: "Under 5 min" },
-      { value: "medium", label: "5-10 min" },
-      { value: "long", label: "Over 10 min" },
-    ],
-  },
-  difficulty: {
-    label: "Difficulty",
-    options: [
-      { value: "beginner", label: "Beginner" },
-      { value: "intermediate", label: "Intermediate" },
-      { value: "advanced", label: "Advanced" },
-    ],
-  },
-}
-
 // Update the section type to include "following"
 type BlogListSection = "featured" | "latest" | "popular" | "hot" | "best" | "following";
 
@@ -95,12 +53,6 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
   const [activeSection, setActiveSection] = useState<BlogListSection | null>(section)
   const [posts, setPosts] = useState<Post[]>([])
   const [featured, setFeatured] = useState<Post[]>([])
-  const [activeFilters, setActiveFilters] = useState({
-    timeRange: "today",
-    tags: [] as string[],
-    readTime: [] as string[],
-    difficulty: [] as string[],
-  })
   const [isScrolled, setIsScrolled] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -138,34 +90,6 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
 
     fetchPosts()
   }, [section, topic])
-
-  const handleFilterToggle = (
-    category: keyof typeof activeFilters,
-    value: string
-  ) => {
-    setActiveFilters((prev) => {
-      const newFilters = { ...prev }
-      if (category === "timeRange") {
-        newFilters.timeRange = value
-      } else {
-        if (prev[category].includes(value)) {
-          newFilters[category] = prev[category].filter((item: string) => item !== value)
-        } else {
-          newFilters[category] = [...prev[category], value]
-        }
-      }
-      return newFilters
-    })
-  }
-
-  const getActiveFilterCount = () => {
-    return Object.entries(activeFilters).reduce((count, [_, value]) => {
-      if (Array.isArray(value)) {
-        return count + value.length
-      }
-      return count + (value ? 1 : 0)
-    }, 0)
-  }
 
   const handleSectionChange = (newSection: BlogListSection) => {
     if (window.location.pathname === '/blog') {
@@ -221,7 +145,7 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`sticky top-14 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-full transition-all duration-200 ${
+        className={`sticky z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-full transition-all duration-200 ${
           isScrolled ? "py-1" : "py-2"
         }`}
         id="sticky-header"
@@ -261,80 +185,6 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
                 </Button>
               </motion.div>
             ))}
-          </motion.div>
-
-          {/* Advanced Filter */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="ml-auto"
-          >
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full relative">
-                  <Filter className="h-3 w-3" />
-                  {getActiveFilterCount() > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-1 -right-1 h-3.5 w-3.5 text-[10px] bg-primary text-primary-foreground rounded-full flex items-center justify-center"
-                    >
-                      {getActiveFilterCount()}
-                    </motion.span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 p-3 rounded-md">
-                <div className="space-y-4">
-                  {Object.entries(filterCategories).map(([key, category], index) => (
-                    <div key={key}>
-                      {index > 0 && <Separator className="my-3" />}
-                      <h3 className="font-medium mb-2 text-sm">{category.label}</h3>
-                      <div className="flex flex-wrap gap-1.5">
-                        {category.options.map((option) => (
-                          <Badge
-                            key={option.value}
-                            variant={
-                              activeFilters[key as keyof typeof activeFilters] === option.value ||
-                              (Array.isArray(activeFilters[key as keyof typeof activeFilters]) && activeFilters[key as keyof typeof activeFilters].includes(option.value))
-                                ? "default"
-                                : "outline"
-                            }
-                            className="cursor-pointer rounded-full px-3"
-                            onClick={() => handleFilterToggle(key as keyof typeof activeFilters, option.value)}
-                          >
-                            {option.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-
-                  {getActiveFilterCount() > 0 && (
-                    <>
-                      <Separator className="my-3" />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs rounded-full"
-                        onClick={() =>
-                          setActiveFilters({
-                            timeRange: "today",
-                            tags: [],
-                            readTime: [],
-                            difficulty: [],
-                          })
-                        }
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Clear all filters
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
           </motion.div>
         </div>
       </motion.div>

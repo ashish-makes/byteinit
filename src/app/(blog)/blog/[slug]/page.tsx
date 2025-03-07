@@ -195,7 +195,20 @@ async function getBlogPost(slug: string) {
   const post = await prisma.blog.findUnique({
     where: { slug },
     include: {
-      user: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          username: true,
+          bio: true,
+          _count: {
+            select: {
+              followers: true
+            }
+          }
+        }
+      },
       _count: {
         select: {
           likes: true,
@@ -350,6 +363,10 @@ interface BlogPost {
     name: string | null
     username: string | null
     image: string | null
+    bio: string | null
+    _count: {
+      followers: number
+    }
   }
   _count: {
     likes: number
@@ -401,6 +418,7 @@ function generateStructuredData(post: {
   user: {
     name: string | null
     username: string | null
+    bio: string | null
   }
   tags: string[]
   content: string
@@ -417,7 +435,8 @@ function generateStructuredData(post: {
     author: {
       '@type': 'Person',
       name: post.user.name,
-      url: `https://yoursite.com/u/${post.user.username}`
+      url: `https://yoursite.com/u/${post.user.username}`,
+      description: post.user.bio
     },
     publisher: {
       '@type': 'Organization',
@@ -901,46 +920,64 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
             <div className="max-w-[900px] mx-auto">
               <div itemProp="author" itemScope itemType="https://schema.org/Person">
                 {/* Author and Metadata */}
-                <div className="flex items-center justify-between mb-4">
-                  <Link 
-                    href={`/u/${post.user.username}`}
-                    className="group flex items-center gap-2 hover:text-foreground"
-                  >
-                    <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
-                      <AvatarImage src={post.user.image || ""} alt={post.user.name || ""} />
-                      <AvatarFallback>{post.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium group-hover:text-primary transition-colors">
-                        {post.user.name}
-                      </span>
-                      <BlogStats
-                        followerCount={followStats.followers}
-                        readingTime={readingTime}
-                        views={post.uniqueViews}
-                        publishDate={publishedDate}
-                      />
+                <div className="mb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Author info and avatar */}
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <Avatar className="h-8 w-8 border-2 border-background shadow-sm flex-shrink-0">
+                        <AvatarImage src={post.user.image || ""} alt={post.user.name || ""} />
+                        <AvatarFallback>{post.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 sm:block">
+                          <Link 
+                            href={`/u/${post.user.username}`}
+                            className="text-sm font-medium hover:underline inline-block"
+                          >
+                            {post.user.name}
+                          </Link>
+                          
+                          {/* Follow Button - Only visible on mobile */}
+                          {session?.user && !isOwnProfile && (
+                            <div className="flex-shrink-0 sm:hidden">
+                              <FollowButton 
+                                username={post.user.username!} 
+                                isFollowing={isFollowing ?? false}
+                                followerCount={followStats.followers}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <BlogStats
+                          followerCount={followStats.followers}
+                          readingTime={readingTime}
+                          views={post.uniqueViews}
+                          publishDate={publishedDate}
+                        />
+                      </div>
                     </div>
-                  </Link>
 
-                  {/* Add Follow Button if not own profile */}
-                  {session?.user && !isOwnProfile && (
-                    <FollowButton 
-                      username={post.user.username!} 
-                      isFollowing={isFollowing ?? false}
-                      followerCount={followStats.followers}
-                    />
-                  )}
+                    {/* Follow Button - Only visible on larger screens */}
+                    {session?.user && !isOwnProfile && (
+                      <div className="hidden sm:block flex-shrink-0">
+                        <FollowButton 
+                          username={post.user.username!} 
+                          isFollowing={isFollowing ?? false}
+                          followerCount={followStats.followers}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Title and Summary */}
               <div className="space-y-3 mb-4">
-                <h1 itemProp="headline" className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                <h1 itemProp="headline" className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
                   {post.title}
                 </h1>
                 {post.summary && (
-                  <p itemProp="description" className="text-base text-muted-foreground leading-relaxed">
+                  <p itemProp="description" className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                     {post.summary}
                   </p>
                 )}

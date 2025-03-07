@@ -69,7 +69,6 @@ import {
   Area,
   XAxis,
   YAxis,
-  ResponsiveContainer,
   Tooltip,
 } from "recharts"
 
@@ -87,6 +86,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+
+// Import Recharts components for PieChart
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts"
 
 // Add after imports
 type TimeRange = 'today' | '7d' | '30d' | '3m' | '6m' | '1y' | 'all';
@@ -150,6 +152,13 @@ const getUserTimeZone = () => {
   }
 };
 
+// Add this interface with the existing interfaces
+interface TrafficSource {
+  name: string;
+  value: number;
+  color: string;
+}
+
 export default function Dashboard() {
   const { data: session } = useSession()
   const router = useRouter()
@@ -171,6 +180,13 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<ChartData>([])
   const [showProfileLink, setShowProfileLink] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [trafficSources, setTrafficSources] = useState<TrafficSource[]>([
+    { name: 'Direct', value: 35, color: '#3b82f6' },
+    { name: 'Social', value: 25, color: '#10b981' },
+    { name: 'Search', value: 20, color: '#6366f1' },
+    { name: 'Referral', value: 15, color: '#f59e0b' },
+    { name: 'Other', value: 5, color: '#64748b' },
+  ]);
 
   // Define chart configuration for shadcn UI
   const chartConfig = {
@@ -440,7 +456,7 @@ export default function Dashboard() {
             <div>
               <p className="text-sm font-medium">Most Engaging Resource</p>
               <p className="text-xs text-muted-foreground mt-1">
-                "React Best Practices" received 45% more engagement this week
+                &ldquo;React Best Practices&rdquo; received 45% more engagement this week
               </p>
             </div>
           </div>
@@ -490,6 +506,96 @@ export default function Dashboard() {
     </motion.div>
   );
 
+  // Update the TrafficSourcesChart component
+  const TrafficSourcesChart = () => {
+    const [activeIndex, setActiveIndex] = useState<number | undefined>();
+
+    const onPieEnter = (_: any, index: number) => {
+      setActiveIndex(index);
+    };
+
+    const onPieLeave = () => {
+      setActiveIndex(undefined);
+    };
+
+    return (
+      <Card className="p-4">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Monitor className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Traffic Sources</h2>
+            <p className="text-sm text-muted-foreground">Where your visitors come from</p>
+          </div>
+        </div>
+
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={trafficSources}
+                cx="50%"
+                cy="50%"
+                innerRadius={70}
+                outerRadius={90}
+                dataKey="value"
+                onMouseEnter={onPieEnter}
+                onMouseLeave={onPieLeave}
+                stroke="transparent"
+              >
+                {trafficSources.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.color}
+                    opacity={activeIndex === undefined || activeIndex === index ? 1 : 0.6}
+                    style={{
+                      filter: activeIndex === index ? 'brightness(1.1)' : 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const data = payload[0].payload;
+                  return (
+                    <div className="rounded-lg border bg-card px-3 py-2 shadow-md">
+                      <p className="text-sm font-medium">{data.name}</p>
+                      <p className="text-2xl font-bold">{data.value}%</p>
+                    </div>
+                  );
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
+          {trafficSources.map((source, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-2 transition-colors hover:text-foreground"
+              onMouseEnter={() => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(undefined)}
+              style={{ opacity: activeIndex === undefined || activeIndex === index ? 1 : 0.6 }}
+            >
+              <div
+                className="h-3 w-3 rounded-full"
+                style={{ backgroundColor: source.color }}
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">{source.name}</span>
+                <span className="text-xs text-muted-foreground">{source.value}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -501,9 +607,11 @@ export default function Dashboard() {
         {/* Welcome and Profile Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground/90">Welcome back, {session?.user?.name || "User"}</h1>
+            <h1 className="text-2xl font-semibold text-foreground/90">
+              Welcome back, {session?.user?.name || "User"}
+            </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Here's what's happening with your content
+              Here&apos;s what&apos;s happening with your content
             </p>
           </div>
           <Button asChild variant="outline" className="gap-2">
@@ -1056,6 +1164,9 @@ export default function Dashboard() {
               </div>
           </div>
         </Card>
+
+        {/* Traffic Sources Chart */}
+        <TrafficSourcesChart />
       </div>
     </div>
   </motion.div>
