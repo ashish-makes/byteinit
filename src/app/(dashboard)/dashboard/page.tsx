@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -44,6 +44,13 @@ import {
   Laptop,
   Tablet,
   Monitor,
+  Plus,
+  BookMarked,
+  Settings,
+  Users,
+  Filter,
+  Tags,
+  MessageSquare,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
@@ -62,6 +69,8 @@ import { Card } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
 import type { LucideIcon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Toaster } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
 
 // Import Recharts components for AreaChart
 import {
@@ -69,7 +78,7 @@ import {
   Area,
   XAxis,
   YAxis,
-  Tooltip,
+  Tooltip as RechartsTooltip,
 } from "recharts"
 
 // Import shadcn UI chart components
@@ -90,8 +99,41 @@ import {
 // Import Recharts components for PieChart
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts"
 
+// Import Tooltip components
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 // Add after imports
 type TimeRange = 'today' | '7d' | '30d' | '3m' | '6m' | '1y' | 'all';
+
+// Add this type near the top with other type definitions
+type ContentType = 'resources' | 'blog';
+
+// Add these types near the top with other type definitions
+type ContentStatus = 'draft' | 'live';
+
+// Update the content filter type definition near the top
+type ContentFilterType = 'all' | 'post' | 'resource';
+
+interface ContentItem {
+  id: string;
+  type: 'post' | 'resource';
+  title: string;
+  summary: string;
+  status: ContentStatus;
+  uploadedAt: string;
+  tags: string[];
+  votes?: number;
+  views?: number;
+  saves: number;
+  comments?: number;
+  likes?: number;
+  slug: string;
+}
 
 // Define the data type for the table
 interface Resource {
@@ -105,6 +147,7 @@ interface Resource {
   saves: number;
   createdAt: string;
   userId: string;
+  slug?: string;
 }
 
 // Define the data type for the chart
@@ -159,10 +202,92 @@ interface TrafficSource {
   color: string;
 }
 
+// First, add these interface updates at the top with other interfaces
+interface QuickActionProps {
+  icon: LucideIcon
+  label: string
+  description: string
+  href: string
+  color: string
+}
+
+// Update the QuickAction component with minimal styling
+const QuickAction = ({ icon: Icon, label, description, href, color }: QuickActionProps) => (
+  <Link 
+    href={href}
+    className="group relative flex flex-col rounded-lg border bg-card/40 px-5 py-4 transition-all duration-200 hover:bg-card/60 hover:border-foreground/10 hover:-translate-y-0.5"
+  >
+    <div className="flex items-start gap-3.5">
+      <div 
+        className="p-2.5 rounded-md w-fit shrink-0 transition-colors duration-200"
+        style={{ backgroundColor: `${color}15` }}
+      >
+        <Icon 
+          className="h-5 w-5 transition-transform duration-200 group-hover:scale-110" 
+          style={{ color }} 
+        />
+      </div>
+      <div>
+        <h3 className="font-semibold text-sm text-foreground/90 tracking-tight mb-1.5 transition-colors duration-200 group-hover:text-foreground">{label}</h3>
+        <p className="text-[13px] text-muted-foreground/80 line-clamp-2 leading-normal">{description}</p>
+      </div>
+    </div>
+  </Link>
+)
+
+// First, add this interface for the metric cards
+interface MetricCardProps {
+  icon: LucideIcon
+  label: string
+  value: number
+  trend: number
+  loading: boolean
+  color: string
+}
+
+// Update the MetricCard component
+const MetricCard = ({ icon: Icon, label, value, trend, loading, color }: MetricCardProps) => (
+  <div className="relative rounded-lg border bg-card/40 p-4">
+    <div className="flex gap-4">
+      <div 
+        className="p-2.5 rounded-md h-fit"
+        style={{ backgroundColor: `${color}10` }}
+      >
+        <Icon className="h-5 w-5" style={{ color }} />
+      </div>
+      
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-medium text-foreground/80">{label}</p>
+          {!loading && trend !== 0 && (
+            <div 
+              className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                trend > 0 ? "text-emerald-500 bg-emerald-500/10" : "text-red-500 bg-red-500/10"
+              }`}
+            >
+              {trend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+              <span>{Math.abs(trend)}%</span>
+            </div>
+          )}
+        </div>
+        
+        {loading ? (
+          <Skeleton className="h-8 w-24" />
+        ) : (
+          <span className="text-2xl font-semibold text-foreground">
+            {value.toLocaleString()}
+          </span>
+        )}
+      </div>
+    </div>
+  </div>
+)
+
 export default function Dashboard() {
   const { data: session } = useSession()
   const router = useRouter()
   const [selectedRange, setSelectedRange] = useState<TimeRange>('30d')
+  const [contentType, setContentType] = useState<ContentType>('resources')
   const [stats, setStats] = useState({
     totalResources: { value: 0, trend: 0 },
     savedResources: { value: 0, trend: 0 },
@@ -187,6 +312,12 @@ export default function Dashboard() {
     { name: 'Referral', value: 15, color: '#f59e0b' },
     { name: 'Other', value: 5, color: '#64748b' },
   ]);
+  const [contentItems, setContentItems] = useState<ContentItem[]>([])
+  const [contentFilter, setContentFilter] = useState<ContentFilterType>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | ContentStatus>('all')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [page, setPage] = useState(1)
+  const [itemsPerPage] = useState(10)
 
   // Define chart configuration for shadcn UI
   const chartConfig = {
@@ -200,24 +331,116 @@ export default function Dashboard() {
     },
   }
 
-  // Fetch stats and resources when session loads
+  // Move setActiveIndex outside of render
+  const [pieChartActiveIndex, setPieChartActiveIndex] = useState<number | undefined>();
+
+  // Fix TypeScript error in the callback
+  const handlePieEnter = useCallback((_: unknown, index: number) => {
+    setPieChartActiveIndex(index);
+  }, []);
+
+  const handlePieLeave = useCallback(() => {
+    setPieChartActiveIndex(undefined);
+  }, []);
+
+  // Update the useEffect to use the correct blog posts endpoint
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch user's resources
         const resourcesResponse = await fetch(`/api/resources?userId=${session?.user?.id}`)
         const allResources = await resourcesResponse.json()
+        console.log('Resources response:', allResources)
+        
         const userResources = allResources.filter(
           (resource: Resource) => resource.userId === session?.user?.id,
         )
+
+        // Fetch user's blog posts
+        let blogPosts = [];
+        try {
+          const blogResponse = await fetch(`/api/blog?userId=${session?.user?.id}`, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          console.log('Blog Response Status:', blogResponse.status);
+          
+          if (blogResponse.ok) {
+            blogPosts = await blogResponse.json();
+            console.log('Raw Blog Data:', blogPosts);
+          } else {
+            console.error('Failed to fetch blog posts:', blogResponse.status);
+            const errorText = await blogResponse.text();
+            console.error('Response:', errorText);
+          }
+        } catch (error) {
+          console.error('Error fetching blog posts:', error);
+        }
+            
+        // Transform resources and blog posts into ContentItem format
+        const resourceItems: ContentItem[] = userResources.map((resource: Resource) => ({
+          id: resource.id,
+          type: 'resource',
+          title: resource.title || '',
+          summary: resource.description || '',
+          status: 'live',
+          uploadedAt: resource.createdAt,
+          tags: resource.category ? [resource.category] : [],
+          likes: resource.likes || 0,
+          saves: resource.saves || 0,
+          views: 0,
+          votes: 0,
+          comments: 0,
+          slug: resource.slug || ''
+        }));
+
+        const blogItems: ContentItem[] = blogPosts.map((post: any) => {
+          // Safely access post._count
+          const counts = {
+            votes: post?._count?.votes || 0,
+            saves: post?._count?.saves || 0,
+            comments: post?._count?.comments || 0
+          };
+
+          return {
+            id: post?.id || '',
+            type: 'post',
+            title: post?.title || '',
+            summary: post?.summary || '',
+            status: post?.published ? 'live' : 'draft',
+            uploadedAt: post?.createdAt || new Date().toISOString(),
+            tags: post?.tags || [],
+            votes: counts.votes,
+            views: post?.uniqueViews || 0,
+            saves: counts.saves,
+            comments: counts.comments,
+            slug: post?.slug || ''
+          };
+        });
+
+        console.log('Resource Items:', resourceItems);
+        console.log('Blog Items:', blogItems);
+
+        // Combine and sort by uploadedAt
+        const combinedItems = [...resourceItems, ...blogItems].sort(
+          (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+        );
+        console.log('Final Combined Items:', combinedItems);
+        setContentItems(combinedItems);
 
         // Fetch saved resources stats
         const savedResponse = await fetch("/api/saved-resources/stats")
         const savesData = await savedResponse.json()
         
         // Fetch blog stats
-        const blogResponse = await fetch(`/api/blog/stats?userId=${session?.user?.id}`)
-        const blogStats = await blogResponse.json()
+        const blogStatsResponse = await fetch(`/api/blog/stats?userId=${session?.user?.id}`)
+        const blogStats = await blogStatsResponse.json()
+        console.log('Blog Stats Response:', blogStats);
+
+        // Calculate total views from blog posts directly
+        const totalViews = blogPosts.reduce((acc: number, post: any) => acc + (post.uniqueViews || 0), 0);
+        console.log('Calculated Total Views:', totalViews);
         
         const now = new Date()
         const today = new Date(now.setHours(0, 0, 0, 0))
@@ -271,15 +494,15 @@ export default function Dashboard() {
             trend: calculateTrend(todayResources.length, yesterdayResources.length),
           },
           totalPosts: {
-            value: blogStats.totalPosts,
+            value: blogPosts.length,
             trend: calculateTrend(blogStats.todayPosts, blogStats.yesterdayPosts),
           },
           postViews: {
-            value: blogStats.totalViews,
+            value: totalViews,
             trend: calculateTrend(blogStats.todayViews, blogStats.yesterdayViews),
           },
           postVotes: {
-            value: blogStats.totalVotes,
+            value: blogPosts.reduce((acc: number, post: any) => acc + (post._count?.votes || 0), 0),
             trend: calculateTrend(blogStats.todayVotes, blogStats.yesterdayVotes),
           },
           monthlyPosts: {
@@ -380,52 +603,61 @@ export default function Dashboard() {
     setSorting(newSorting)
 
     const sorted = [...resources].sort((a, b) => {
-      if (a[column] < b[column]) return newSorting === "asc" ? -1 : 1
-      if (a[column] > b[column]) return newSorting === "asc" ? 1 : -1
-      return 0
-    })
+      const aValue = a[column] ?? '';
+      const bValue = b[column] ?? '';
+      if (aValue < bValue) return newSorting === "asc" ? -1 : 1;
+      if (aValue > bValue) return newSorting === "asc" ? 1 : -1;
+      return 0;
+    });
 
     setResources(sorted)
   }
 
-  const handleEdit = (id: string) => {
-    router.push(`/dashboard/resources/edit/${id}`)
+  const handleEdit = (id: string, type: 'post' | 'resource', slug?: string) => {
+    if (type === 'post') {
+      if (!slug) {
+        toast.error("Unable to edit post: Missing slug");
+        return;
+      }
+      router.push(`/dashboard/blog/${slug}/edit`);
+    } else {
+      router.push(`/dashboard/resources/edit/${id}`);
+    }
   }
 
-  const handleDelete = async (id: string) => {
-    setResourceToDelete(id)
-  }
+  const handleView = (id: string, type: 'post' | 'resource', slug?: string) => {
+    if (type === 'post') {
+      router.push(`/blog/${slug}`);
+    } else {
+      router.push(`/resources/${id}`);
+    }
+  };
 
-  const confirmDelete = async () => {
-    if (!resourceToDelete) return
-
+  const handleDelete = async (id: string, type: 'post' | 'resource', slug?: string) => {
+    setResourceToDelete(id);
+    const endpoint = type === 'post' ? `/api/blog/${slug}` : `/api/resources/${id}`;
+    
     toast.promise(
-      fetch(`/api/resources/${resourceToDelete}`, { method: "DELETE" }).then((response) => {
+      fetch(endpoint, { method: "DELETE" }).then((response) => {
         if (response.ok) {
-          setResources(resources.filter((resource) => resource.id !== resourceToDelete))
-          return "Resource deleted successfully"
+          setContentItems(items => items.filter(item => item.id !== id));
+          return `${type === 'post' ? 'Post' : 'Resource'} deleted successfully`;
         } else {
-          throw new Error("Failed to delete resource")
+          throw new Error(`Failed to delete ${type}`);
         }
       }),
       {
-        loading: "Deleting resource...",
-        success: "Resource deleted successfully",
-        error: "Failed to delete resource",
+        loading: `Deleting ${type}...`,
+        success: (message) => message,
+        error: (error) => error.message,
       },
-    )
-
-    setResourceToDelete(null)
+    );
   }
 
   // Update the formatDate helper function
   const formatDate = (value: string) => {
     const date = new Date(value);
-    return date.toLocaleDateString('en-US', {
-      timeZone: getUserTimeZone(),
-      month: 'short',
-      day: 'numeric'
-    });
+    return formatDistanceToNow(date, { addSuffix: true });
   };
 
   // Update the calculateTrend function to handle edge cases better
@@ -506,18 +738,8 @@ export default function Dashboard() {
     </motion.div>
   );
 
-  // Update the TrafficSourcesChart component
+  // Update the TrafficSourcesChart component to use the callbacks
   const TrafficSourcesChart = () => {
-    const [activeIndex, setActiveIndex] = useState<number | undefined>();
-
-    const onPieEnter = (_: any, index: number) => {
-      setActiveIndex(index);
-    };
-
-    const onPieLeave = () => {
-      setActiveIndex(undefined);
-    };
-
     return (
       <Card className="p-4">
         <div className="flex items-center gap-3 mb-6">
@@ -540,24 +762,24 @@ export default function Dashboard() {
                 innerRadius={70}
                 outerRadius={90}
                 dataKey="value"
-                onMouseEnter={onPieEnter}
-                onMouseLeave={onPieLeave}
+                onMouseEnter={handlePieEnter}
+                onMouseLeave={handlePieLeave}
                 stroke="transparent"
               >
                 {trafficSources.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={entry.color}
-                    opacity={activeIndex === undefined || activeIndex === index ? 1 : 0.6}
+                    opacity={pieChartActiveIndex === undefined || pieChartActiveIndex === index ? 1 : 0.6}
                     style={{
-                      filter: activeIndex === index ? 'brightness(1.1)' : 'none',
+                      filter: pieChartActiveIndex === index ? 'brightness(1.1)' : 'none',
                       transition: 'all 0.3s ease'
                     }}
                   />
                 ))}
               </Pie>
-              <Tooltip
-                content={({ active, payload }) => {
+              <RechartsTooltip
+                content={({ active, payload }: { active?: boolean; payload?: Array<any> }) => {
                   if (!active || !payload?.length) return null;
                   const data = payload[0].payload;
                   return (
@@ -577,9 +799,9 @@ export default function Dashboard() {
             <div
               key={index}
               className="flex items-center gap-2 transition-colors hover:text-foreground"
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(undefined)}
-              style={{ opacity: activeIndex === undefined || activeIndex === index ? 1 : 0.6 }}
+              onMouseEnter={() => handlePieEnter(null, index)}
+              onMouseLeave={handlePieLeave}
+              style={{ opacity: pieChartActiveIndex === undefined || pieChartActiveIndex === index ? 1 : 0.6 }}
             >
               <div
                 className="h-3 w-3 rounded-full"
@@ -596,579 +818,613 @@ export default function Dashboard() {
     );
   };
 
+  // Add these handler functions before the return statement
+  const handlePublish = async (id: string) => {
+    try {
+      const item = contentItems.find(item => item.id === id);
+      if (!item) return;
+
+      const endpoint = item.type === 'post' ? '/api/blog/publish' : '/api/resources/publish';
+      const response = await fetch(`${endpoint}/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) throw new Error('Failed to publish');
+
+      // Update the item status in the local state
+      setContentItems(items =>
+        items.map(item =>
+          item.id === id ? { ...item, status: 'live' } : item
+        )
+      );
+
+      toast.success(`${item.type === 'post' ? 'Post' : 'Resource'} published successfully`);
+    } catch (error) {
+      console.error('Error publishing:', error);
+      toast.error('Failed to publish');
+    }
+  };
+
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-8"
-    >
-      {/* Header Section */}
-      <div className="flex flex-col gap-8">
-        {/* Welcome and Profile Section */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground/90">
-              Welcome back, {session?.user?.name || "User"}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Here&apos;s what&apos;s happening with your content
-            </p>
+    <>
+      <Toaster />
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-8"
+      >
+        {/* Header Section */}
+        <div className="flex flex-col gap-8">
+          {/* Welcome and Profile Section */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground/90">
+                Welcome back, {session?.user?.name || "User"}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Here&apos;s what&apos;s happening with your content
+              </p>
+            </div>
+            <Button asChild variant="outline" className="gap-2">
+              <Link href="/dashboard/new">
+                <FileText className="h-4 w-4" />
+                Create New Post
+              </Link>
+            </Button>
           </div>
-          <Button asChild variant="outline" className="gap-2">
-            <Link href="/dashboard/new">
-              <FileText className="h-4 w-4" />
-              Create New Post
-            </Link>
-          </Button>
-        </div>
 
-        {/* Profile Link Card - Only show if not dismissed */}
-        <AnimatePresence mode="wait">
-          {showProfileLink && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg border bg-card/50 backdrop-blur-sm"
-            >
-              {/* Close button - Mobile only */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={dismissProfileLink}
-                className="absolute sm:hidden right-2 top-2 h-6 w-6 rounded-full shrink-0"
+          {/* Update the Quick Actions Panel */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <QuickAction
+              icon={Plus}
+              label="New Resource"
+              description="Share a helpful resource or tutorial"
+              href="/dashboard/resources/new"
+              color="#3b82f6"
+            />
+            <QuickAction
+              icon={FileText}
+              label="Write Blog"
+              description="Create an engaging blog post"
+              href="/dashboard/blog/new"
+              color="#8b5cf6"
+            />
+            <QuickAction
+              icon={BookMarked}
+              label="Saved Items"
+              description="Access your saved resources"
+              href="/dashboard/saved"
+              color="#10b981"
+            />
+            <QuickAction
+              icon={Settings}
+              label="Settings"
+              description="Customize your preferences"
+              href="/dashboard/settings"
+              color="#f59e0b"
+            />
+          </div>
+
+          {/* Profile Link Card - Only show if not dismissed */}
+          <AnimatePresence mode="wait">
+            {showProfileLink && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg border bg-card/50 backdrop-blur-sm"
               >
-                <X className="h-3 w-3" />
-              </Button>
-
-              <div className="flex items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
-                <div className="p-2 rounded-md bg-primary/10 shrink-0">
-                  <Link2 className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-medium text-sm text-foreground/90 flex items-center gap-2">
-                    Your Profile is Ready! 
-                    <span className="hidden xs:inline">🎉</span>
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <code className="px-2 py-0.5 text-xs rounded bg-muted truncate">
-                      {getDisplayUrl(session?.user)}
-                    </code>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex gap-1 sm:gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-8 sm:w-auto sm:px-3 relative"
-                  onClick={() => {
-                    navigator.clipboard.writeText(getDisplayUrl(session?.user));
-                    setCopySuccess(true);
-                    setTimeout(() => setCopySuccess(false), 2000);
-                  }}
-                >
-                  {copySuccess ? (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                    >
-                      <Check className="h-3 w-3" />
-                    </motion.div>
-                  ) : (
-                    <Copy className="h-3 w-3" />
-                  )}
-                  <span className="hidden sm:inline-block sm:ml-1 text-xs">
-                    {copySuccess ? 'Copied!' : 'Copy'}
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-8 sm:w-auto sm:px-3"
-                  asChild
-                >
-                  <Link href={getNavigationUrl(session?.user)}>
-                    <ExternalLink className="h-3 w-3" />
-                    <span className="hidden sm:inline-block sm:ml-1 text-xs">View</span>
-                  </Link>
-                </Button>
-                {/* Close button - Desktop only */}
+                {/* Close button - Mobile only */}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={dismissProfileLink}
-                  className="hidden sm:flex h-8 w-8 rounded-full shrink-0"
+                  className="absolute sm:hidden right-2 top-2 h-6 w-6 rounded-full shrink-0"
                 >
                   <X className="h-3 w-3" />
                 </Button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Resources */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-            <FileText className="h-5 w-5 text-primary" />
-          </div>
-            <div>
-              <h2 className="text-lg font-semibold">Resources Overview</h2>
-              <p className="text-sm text-muted-foreground">Your resource metrics</p>
+                <div className="flex items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
+                  <div className="p-2 rounded-md bg-primary/10 shrink-0">
+                    <Link2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-sm text-foreground/90 flex items-center gap-2">
+                      Your Profile is Ready! 
+                      <span className="hidden xs:inline">🎉</span>
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <code className="px-2 py-0.5 text-xs rounded bg-muted truncate">
+                        {getDisplayUrl(session?.user)}
+                      </code>
+                    </div>
+                  </div>
                 </div>
-            </div>
+                
+                <div className="flex gap-1 sm:gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 sm:w-auto sm:px-3 relative"
+                    onClick={() => {
+                      navigator.clipboard.writeText(getDisplayUrl(session?.user));
+                      setCopySuccess(true);
+                      setTimeout(() => setCopySuccess(false), 2000);
+                    }}
+                  >
+                    {copySuccess ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                      >
+                        <Check className="h-3 w-3" />
+                      </motion.div>
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                    <span className="hidden sm:inline-block sm:ml-1 text-xs">
+                      {copySuccess ? 'Copied!' : 'Copy'}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 sm:w-auto sm:px-3"
+                    asChild
+                  >
+                    <Link href={getNavigationUrl(session?.user)}>
+                      <ExternalLink className="h-3 w-3" />
+                      <span className="hidden sm:inline-block sm:ml-1 text-xs">View</span>
+                    </Link>
+                  </Button>
+                  {/* Close button - Desktop only */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={dismissProfileLink}
+                    className="hidden sm:flex h-8 w-8 rounded-full shrink-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-          {/* Resource Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <StatCard
-              icon={FileText}
-              label="Total Resources"
-              value={stats.totalResources.value}
-              trend={stats.totalResources.trend}
-              loading={loading}
-            />
-            <StatCard
-              icon={Heart}
-              label="Total Likes"
-              value={stats.totalLikes.value}
-              trend={stats.totalLikes.trend}
-              loading={loading}
-            />
-            <StatCard
-              icon={Bookmark}
-              label="Saved Resources"
-              value={stats.savedResources.value}
-              trend={stats.savedResources.trend}
-              loading={loading}
-            />
-            <StatCard
-              icon={Calendar}
-              label="This Month"
-              value={stats.monthlyResources.value}
-              trend={stats.monthlyResources.trend}
-              loading={loading}
-            />
-          </div>
-
-          {/* Resource Performance Chart */}
-          <Card className="p-4">
-            <div className="space-y-6">
-              <div className="flex flex-wrap gap-4 items-center justify-between">
+        {/* Key Metrics Section */}
+        <div className="space-y-6">
+          <div className="w-full">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Activity className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold">Performance</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedRange === 'today' ? 'Today' :
-                       selectedRange === '7d' ? 'Last 7 Days' :
-                       selectedRange === '30d' ? 'Last 30 Days' :
-                       selectedRange === '3m' ? 'Last 3 Months' :
-                       selectedRange === '6m' ? 'Last 6 Months' :
-                       selectedRange === '1y' ? 'Last Year' : 'Lifetime'} overview
-                    </p>
+                    <h2 className="text-lg font-semibold">Key Metrics</h2>
+                    <p className="text-sm text-muted-foreground">Track your content performance</p>
                   </div>
                 </div>
-                
-                {/* Time Range Selector - Better positioned */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8">
-                      <CalendarDays className="h-4 w-4 mr-2" />
-                      {selectedRange === 'today' ? 'Today' :
-                       selectedRange === '7d' ? '7 Days' :
-                       selectedRange === '30d' ? '30 Days' :
-                       selectedRange === '3m' ? '3 Months' :
-                       selectedRange === '6m' ? '6 Months' :
-                       selectedRange === '1y' ? '1 Year' : 'All Time'}
+                    <Button variant="outline" size="sm" className="h-8 rounded-md">
+                      {contentType === 'resources' ? (
+                        <FolderOpenDot className="h-4 w-4 mr-2" />
+                      ) : (
+                        <FileText className="h-4 w-4 mr-2" />
+                      )}
+                      {contentType === 'resources' ? 'Resources' : 'Blog Posts'}
                       <ChevronDown className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[180px]">
-                    {[
-                      { value: 'today', label: 'Today', icon: Timer },
-                      { value: '7d', label: 'Last 7 Days', icon: Calendar },
-                      { value: '30d', label: 'Last 30 Days', icon: Calendar },
-                      { value: '3m', label: 'Last 3 Months', icon: CalendarRange },
-                      { value: '6m', label: 'Last 6 Months', icon: CalendarRange },
-                      { value: '1y', label: 'Last Year', icon: CalendarRange },
-                      { value: 'all', label: 'Lifetime', icon: CalendarRange },
-                    ].map(({ value, label, icon: Icon }) => (
-                      <DropdownMenuItem
-                        key={value}
-                        onClick={() => setSelectedRange(value as TimeRange)}
-                        className="gap-2"
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span>{label}</span>
-                        {selectedRange === value && <Check className="h-4 w-4 ml-auto" />}
-                      </DropdownMenuItem>
-                    ))}
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setContentType('resources')}>
+                      <FolderOpenDot className="h-4 w-4 mr-2" />
+                      Resources
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setContentType('blog')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Blog Posts
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-          </div>
-
-              {/* Chart Legend - Moved below header */}
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-400" />
-                    <span className="text-sm text-muted-foreground font-medium">Resource Likes</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 border-2 border-blue-500 rounded-full" />
-                    <span className="text-sm text-muted-foreground font-medium">Resource Saves</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-purple-500 to-purple-400" />
-                    <span className="text-sm text-muted-foreground font-medium">Post Views</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 border-2 border-purple-500 rounded-full" />
-                    <span className="text-sm text-muted-foreground font-medium">Post Votes</span>
-                  </div>
-                </div>
               </div>
 
-              <div className="h-[240px] sm:h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="resourceGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="rgb(59, 130, 246)" stopOpacity={0.01} />
-                      </linearGradient>
-                      <linearGradient id="combinedPostGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgb(147, 51, 234)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="rgb(147, 51, 234)" stopOpacity={0.01} />
-                      </linearGradient>
-                    </defs>
-
-                    <XAxis
-                      dataKey="date"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                      tickFormatter={formatDate}
-                      padding={{ left: 10, right: 10 }}
-                      minTickGap={5}
-                    />
-
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                      tickFormatter={(value) => value.toLocaleString()}
-                      width={35}
-                    />
-
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload) return null;
-                        
-                        const date = new Date(label);
-                        const formattedDate = date.toLocaleDateString('en-US', {
-                          timeZone: getUserTimeZone(),
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                        });
-
-                        const resourceEngagement = Number(payload[0]?.value || 0) + Number(payload[1]?.value || 0);
-                        const postEngagement = Number(payload[2]?.value || 0) + Number(payload[3]?.value || 0);
-
-                        return (
-                          <div className="rounded-lg border bg-card px-3 py-2 shadow-md">
-                            <p className="text-xs font-medium text-muted-foreground mb-1">
-                              {formattedDate}
-                            </p>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-400" />
-                                <span className="text-xs font-medium">{resourceEngagement}</span>
-                                <span className="text-[10px] text-muted-foreground">resources</span>
+              {contentType === 'resources' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <MetricCard
+                    icon={FileText}
+                    label="Total Resources"
+                    value={stats.totalResources.value}
+                    trend={stats.totalResources.trend}
+                    loading={loading}
+                    color="#3b82f6"
+                  />
+                  <MetricCard
+                    icon={Heart}
+                    label="Total Likes"
+                    value={stats.totalLikes.value}
+                    trend={stats.totalLikes.trend}
+                    loading={loading}
+                    color="#ec4899"
+                  />
+                  <MetricCard
+                    icon={Bookmark}
+                    label="Saved Resources"
+                    value={stats.savedResources.value}
+                    trend={stats.savedResources.trend}
+                    loading={loading}
+                    color="#10b981"
+                  />
+                  <MetricCard
+                    icon={Calendar}
+                    label="This Month"
+                    value={stats.monthlyResources.value}
+                    trend={stats.monthlyResources.trend}
+                    loading={loading}
+                    color="#8b5cf6"
+                  />
                 </div>
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-purple-400" />
-                                <span className="text-xs font-medium">{postEngagement}</span>
-                                <span className="text-[10px] text-muted-foreground">posts</span>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <MetricCard
+                    icon={FileText}
+                    label="Total Posts"
+                    value={stats.totalPosts.value}
+                    trend={stats.totalPosts.trend}
+                    loading={loading}
+                    color="#3b82f6"
+                  />
+                  <MetricCard
+                    icon={Eye}
+                    label="Total Views"
+                    value={stats.postViews.value}
+                    trend={stats.postViews.trend}
+                    loading={loading}
+                    color="#f59e0b"
+                  />
+                  <MetricCard
+                    icon={ArrowUp}
+                    label="Total Votes"
+                    value={stats.postVotes.value}
+                    trend={stats.postVotes.trend}
+                    loading={loading}
+                    color="#10b981"
+                  />
+                  <MetricCard
+                    icon={CalendarDays}
+                    label="This Month"
+                    value={stats.monthlyPosts.value}
+                    trend={stats.monthlyPosts.trend}
+                    loading={loading}
+                    color="#8b5cf6"
+                  />
+                </div>
+              )}
             </div>
           </div>
-                          </div>
-                        );
-                      }}
-                    />
-
-                    <Area
-                      type="monotone"
-                      dataKey="likes"
-                      name="Likes"
-                      stroke="rgb(59, 130, 246)"
-                      strokeWidth={1.5}
-                      fill="url(#resourceGradient)"
-                      dot={false}
-                    />
-
-                    <Area
-                      type="monotone"
-                      dataKey="saves"
-                      name="Saves"
-                      stroke="rgb(59, 130, 246)"
-                      strokeWidth={1.5}
-                      fillOpacity={0}
-                      dot={false}
-                      strokeDasharray="4 4"
-                    />
-
-                    <Area
-                      type="monotone"
-                      dataKey="postViews"
-                      name="Views"
-                      stroke="rgb(147, 51, 234)"
-                      strokeWidth={1.5}
-                      fill="url(#combinedPostGradient)"
-                      dot={false}
-                    />
-
-                    <Area
-                      type="monotone"
-                      dataKey="postVotes"
-                      name="Votes"
-                      stroke="rgb(147, 51, 234)"
-                      strokeWidth={1.5}
-                      fillOpacity={0}
-                      dot={false}
-                      strokeDasharray="4 4"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </Card>
         </div>
 
-        {/* Right Column - Blog */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-        <h2 className="text-lg font-semibold">Blog Overview</h2>
-              <p className="text-sm text-muted-foreground">Your blog metrics</p>
+        {/* Content Overview Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Content Overview</h2>
+                <p className="text-sm text-muted-foreground">Manage your posts and resources</p>
+              </div>
             </div>
           </div>
 
-          {/* Blog Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <StatCard
-            icon={FileText}
-            label="Total Posts"
-            value={stats.totalPosts.value}
-            trend={stats.totalPosts.trend}
-            loading={loading}
-          />
-          <StatCard
-            icon={Eye}
-            label="Total Views"
-            value={stats.postViews.value}
-            trend={stats.postViews.trend}
-            loading={loading}
-          />
-          <StatCard
-            icon={ArrowUp}
-            label="Total Votes"
-            value={stats.postVotes.value}
-            trend={stats.postVotes.trend}
-            loading={loading}
-          />
-          <StatCard
-            icon={CalendarDays}
-              label="This Month"
-            value={stats.monthlyPosts.value}
-            trend={stats.monthlyPosts.trend}
-            loading={loading}
-          />
-      </div>
-
-          {/* Blog Performance Chart */}
-          <Card className="p-4">
-            <div className="space-y-6">
-              <div className="flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Activity className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-                    <h2 className="text-lg font-semibold">Blog Performance</h2>
-              <p className="text-sm text-muted-foreground">
-                      {selectedRange === 'today' ? 'Today' :
-                 selectedRange === '7d' ? 'Last 7 Days' :
-                 selectedRange === '30d' ? 'Last 30 Days' :
-                 selectedRange === '3m' ? 'Last 3 Months' :
-                 selectedRange === '6m' ? 'Last 6 Months' :
-                       selectedRange === '1y' ? 'Last Year' : 'Lifetime'} overview
-              </p>
-            </div>
-          </div>
-          
-                {/* Time Range Selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8">
-                      <CalendarDays className="h-4 w-4 mr-2" />
-                  {selectedRange === 'today' ? 'Today' :
-                       selectedRange === '7d' ? '7 Days' :
-                       selectedRange === '30d' ? '30 Days' :
-                       selectedRange === '3m' ? '3 Months' :
-                       selectedRange === '6m' ? '6 Months' :
-                       selectedRange === '1y' ? '1 Year' : 'All Time'}
-                      <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[180px]">
-              {[
-                { value: 'today', label: 'Today', icon: Timer },
-                { value: '7d', label: 'Last 7 Days', icon: Calendar },
-                { value: '30d', label: 'Last 30 Days', icon: Calendar },
-                { value: '3m', label: 'Last 3 Months', icon: CalendarRange },
-                { value: '6m', label: 'Last 6 Months', icon: CalendarRange },
-                { value: '1y', label: 'Last Year', icon: CalendarRange },
-                { value: 'all', label: 'Lifetime', icon: CalendarRange },
-              ].map(({ value, label, icon: Icon }) => (
-                <DropdownMenuItem
-                  key={value}
-                  onClick={() => setSelectedRange(value as TimeRange)}
-                  className="gap-2"
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
-                  {selectedRange === value && <Check className="h-4 w-4 ml-auto" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-              {/* Chart Legend */}
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-orange-500 to-orange-400" />
-                    <span className="text-sm text-muted-foreground font-medium">Views</span>
-              </div>
-              <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 border-2 border-green-500 rounded-full" />
-                    <span className="text-sm text-muted-foreground font-medium">Votes</span>
-                  </div>
-              </div>
-            </div>
-
-              <div className="h-[240px] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                  <defs>
-                      <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgb(249, 115, 22)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="rgb(249, 115, 22)" stopOpacity={0.01} />
-                    </linearGradient>
-                      <linearGradient id="votesGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgb(34, 197, 94)" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="rgb(34, 197, 94)" stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
-
-                  <XAxis
-                    dataKey="date"
-                    axisLine={false}
-                    tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    tickFormatter={formatDate}
-                      padding={{ left: 10, right: 10 }}
-                      minTickGap={5}
-                  />
-
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    tickFormatter={(value) => value.toLocaleString()}
-                      width={35}
-                  />
-
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                      if (!active || !payload) return null;
-                      
-                        const date = new Date(label);
-                      const formattedDate = date.toLocaleDateString('en-US', {
-                          timeZone: getUserTimeZone(),
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      });
-
-                      return (
-                          <div className="rounded-lg border bg-card px-3 py-2 shadow-md">
-                            <p className="text-xs font-medium text-muted-foreground mb-1">
-                            {formattedDate}
-                          </p>
-                            <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-gradient-to-r from-orange-500 to-orange-400" />
-                                <span className="text-xs font-medium">{Number(payload[0]?.value || 0)}</span>
-                                <span className="text-[10px] text-muted-foreground">views</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-gradient-to-r from-green-500 to-green-400" />
-                                <span className="text-xs font-medium">{Number(payload[1]?.value || 0)}</span>
-                                <span className="text-[10px] text-muted-foreground">votes</span>
-                            </div>
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-border/50 hover:bg-transparent">
+                  <TableHead className="w-[400px] py-2 text-xs uppercase tracking-wider text-foreground/70">Content</TableHead>
+                  <TableHead className="py-2 text-xs uppercase tracking-wider text-foreground/70">Status</TableHead>
+                  <TableHead className="text-center py-2 text-xs uppercase tracking-wider text-foreground/70">Views/Likes</TableHead>
+                  <TableHead className="text-center py-2 text-xs uppercase tracking-wider text-foreground/70">Saves</TableHead>
+                  <TableHead className="text-center py-2 text-xs uppercase tracking-wider text-foreground/70">Comments</TableHead>
+                  <TableHead className="text-center py-2 text-xs uppercase tracking-wider text-foreground/70">Votes</TableHead>
+                  <TableHead className="py-2 text-xs uppercase tracking-wider text-foreground/70">Uploaded</TableHead>
+                  <TableHead className="text-right py-2 text-xs uppercase tracking-wider text-foreground/70">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  // Skeleton loading rows
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index} className="border-b border-border/50">
+                      <TableCell className="py-3">
+                        <div className="flex items-start gap-2.5">
+                          <Skeleton className="h-8 w-8 rounded-lg" />
+                          <div className="space-y-2 flex-1">
+                            <Skeleton className="h-4 w-[250px]" />
+                            <Skeleton className="h-3 w-[180px]" />
                           </div>
                         </div>
-                      );
-                    }}
-                  />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-8 mx-auto" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-8 mx-auto" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-8 mx-auto" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-8 mx-auto" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Skeleton className="h-7 w-7" />
+                          <Skeleton className="h-7 w-7" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  contentItems
+                    .filter(item => {
+                      const matchesType = contentFilter === 'all' || item.type === contentFilter;
+                      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+                      return matchesType && matchesStatus;
+                    })
+                    .slice((page - 1) * itemsPerPage, page * itemsPerPage)
+                    .map((item) => (
+                      <TableRow 
+                        key={item.id}
+                        className="border-b border-border/50 hover:bg-muted/50 transition-colors"
+                      >
+                        <TableCell className="py-3">
+                          <div className="flex items-start gap-2.5">
+                            <div className={`p-2 rounded-lg shrink-0 ${
+                              item.type === 'post' 
+                                ? 'bg-purple-500/10' 
+                                : 'bg-blue-500/10'
+                            }`}>
+                              {item.type === 'post' ? (
+                                <FileText className="h-3.5 w-3.5 text-purple-500" />
+                              ) : (
+                                <FolderOpenDot className="h-3.5 w-3.5 text-blue-500" />
+                              )}
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                              <div>
+                                <p className="font-medium text-sm text-foreground/90 leading-snug truncate">
+                                  {item.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground/80 line-clamp-1 leading-normal mt-0.5">
+                                  {item.summary}
+                                </p>
+                              </div>
+                              {item.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {item.tags.slice(0, 3).map(tag => (
+                                    <Badge 
+                                      key={tag} 
+                                      className={`px-1.5 py-0 text-[10px] font-medium rounded-full shadow-none pointer-events-none ${
+                                        item.type === 'post'
+                                          ? 'bg-purple-500/5 text-purple-500'
+                                          : 'bg-blue-500/5 text-blue-500'
+                                      }`}
+                                    >
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                  {item.tags.length > 3 && (
+                                    <span className="text-[10px] text-muted-foreground">
+                                      +{item.tags.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={item.status === 'live' ? 'default' : 'secondary'}
+                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-none pointer-events-none ${
+                              item.status === 'live' 
+                                ? 'bg-emerald-500/10 text-emerald-500' 
+                                : 'bg-amber-500/10 text-amber-500'
+                            }`}
+                          >
+                            {item.status === 'live' ? 'Published' : 'Draft'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {item.type === 'post' ? (
+                              <>
+                                <Eye className="h-3.5 w-3.5 text-foreground/70" />
+                                <span className="text-xs font-medium text-foreground">{item.views || 0}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Heart className="h-3.5 w-3.5 text-foreground/70" />
+                                <span className="text-xs font-medium text-foreground">{item.likes || 0}</span>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Bookmark className="h-3.5 w-3.5 text-foreground/70" />
+                            <span className="text-xs font-medium text-foreground">{item.saves || 0}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {item.type === 'post' && (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <MessageSquare className="h-3.5 w-3.5 text-foreground/70" />
+                              <span className="text-xs font-medium text-foreground">{item.comments || 0}</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {item.type === 'post' && (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <ArrowUp className="h-3.5 w-3.5 text-foreground/70" />
+                              <span className="text-xs font-medium text-foreground">{item.votes || 0}</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <time className="text-xs text-foreground/70" dateTime={item.uploadedAt}>
+                            {formatDate(item.uploadedAt)}
+                          </time>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {item.status === 'draft' ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7"
+                                      onClick={() => handleEdit(item.id, item.type, item.slug)}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                      <span className="sr-only">Edit</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit {item.type}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <>
+                                {item.type === 'post' && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7"
+                                          onClick={() => handleView(item.id, item.type, item.slug)}
+                                        >
+                                          <ExternalLink className="h-3.5 w-3.5" />
+                                          <span className="sr-only">View</span>
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>View post</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7"
+                                        onClick={() => handleEdit(item.id, item.type, item.slug)}
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                        <span className="sr-only">Edit</span>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Edit {item.type}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </>
+                            )}
+                            <AlertDialog>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 text-red-500 hover:text-red-600"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <span className="sr-only">Delete</span>
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                  </TooltipTrigger>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete {item.type}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this {item.type}? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-red-500 hover:bg-red-600"
+                                    onClick={() => handleDelete(item.id, item.type, item.slug)}
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
 
-                  <Area
-                    type="monotone"
-                      dataKey="postViews"
-                      name="Views"
-                      stroke="rgb(249, 115, 22)"
-                      strokeWidth={1.5}
-                      fill="url(#viewsGradient)"
-                    dot={false}
-                  />
-
-                  <Area
-                    type="monotone"
-                      dataKey="postVotes"
-                      name="Votes"
-                      stroke="rgb(34, 197, 94)"
-                      strokeWidth={1.5}
-                      fillOpacity={0}
-                    dot={false}
-                      strokeDasharray="4 4"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            {/* Pagination */}
+            {!loading && (
+              <div className="flex items-center justify-between px-4 py-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing {Math.min((page - 1) * itemsPerPage + 1, contentItems.length)} to{' '}
+                  {Math.min(page * itemsPerPage, contentItems.length)} of {contentItems.length} entries
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page * itemsPerPage >= contentItems.length}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
+            )}
           </div>
-        </Card>
-
-        {/* Traffic Sources Chart */}
-        <TrafficSourcesChart />
-      </div>
-    </div>
-  </motion.div>
-);
+        </div>
+      </motion.div>
+    </>
+  );
 }

@@ -81,10 +81,12 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const section = searchParams.get('section')
+    const userId = searchParams.get('userId')
 
     // Base query
     const baseWhere = {
-      published: true,
+      ...(userId ? { userId } : {}),
+      ...(userId ? {} : { published: true }), // Only filter by published if not fetching user's posts
     }
 
     // Get posts based on section
@@ -114,10 +116,10 @@ export async function GET(request: Request) {
           votes: true,
           saves: true,
         },
-        take: 20,
+        take: userId ? undefined : 20, // Don't limit if fetching user's posts
       }),
-      // Featured posts
-      prisma.blog.findMany({
+      // Featured posts - only if not fetching user's posts
+      userId ? Promise.resolve([]) : prisma.blog.findMany({
         where: {
           ...baseWhere,
           featured: true,
@@ -152,6 +154,12 @@ export async function GET(request: Request) {
       }))
     )
 
+    // If fetching user's posts, return array directly
+    if (userId) {
+      return NextResponse.json(postsWithViews)
+    }
+
+    // Otherwise return object with items and featured
     return NextResponse.json({
       items: postsWithViews,
       featured: await Promise.all(

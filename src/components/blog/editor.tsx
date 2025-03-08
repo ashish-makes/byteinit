@@ -345,20 +345,50 @@ const ImageDialog = ({
     }))
     setUploads(prev => [...prev, ...newUploads])
 
-    // Simulate upload progress
-    newUploads.forEach(upload => {
-      const interval = setInterval(() => {
-        setUploads(prev => 
-          prev.map(u => 
-            u.file === upload.file
-              ? { ...u, progress: Math.min(u.progress + 10, 100) }
-              : u
-          )
-        )
-      }, 100)
+    // Upload each file
+    for (const upload of newUploads) {
+      try {
+        const formData = new FormData()
+        formData.append('file', upload.file)
 
-      setTimeout(() => clearInterval(interval), 1000)
-    })
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', '/api/upload', true)
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100)
+            setUploads(prev => 
+              prev.map(u => 
+                u.file === upload.file ? { ...u, progress } : u
+              )
+            )
+          }
+        }
+
+        xhr.onload = async () => {
+          if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText)
+            setUploads(prev =>
+              prev.map(u =>
+                u.file === upload.file ? { ...u, url: response.url, progress: 100 } : u
+              )
+            )
+          } else {
+            throw new Error('Upload failed')
+          }
+        }
+
+        xhr.onerror = () => {
+          throw new Error('Upload failed')
+        }
+
+        xhr.send(formData)
+      } catch (error) {
+        console.error('Error uploading file:', error)
+        toast.error('Failed to upload image')
+        setUploads(prev => prev.filter(u => u.file !== upload.file))
+      }
+    }
   }
 
   return (

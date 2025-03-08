@@ -14,6 +14,7 @@ import { vote, toggleSave } from "@/app/(blog)/blog/actions"
 import { useSavedPosts } from "@/contexts/SavedPostsContext"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
+import DOMPurify from 'isomorphic-dompurify'
 
 interface FeaturedPost {
   id: string
@@ -40,6 +41,27 @@ interface FeaturedPost {
 
 interface FeaturedPostsProps {
   posts: FeaturedPost[]
+}
+
+// Helper function to strip HTML and truncate text
+function stripHtmlAndTruncate(html: string, maxLength: number = 160) {
+  // First sanitize the HTML
+  const sanitizedHtml = DOMPurify.sanitize(html)
+  
+  // Create a temporary div to handle HTML content
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = sanitizedHtml
+  
+  // Get text content and remove extra whitespace
+  let text = tempDiv.textContent || tempDiv.innerText
+  text = text.replace(/\s+/g, ' ').trim()
+  
+  // Truncate if needed
+  if (text.length > maxLength) {
+    return text.substring(0, maxLength) + '...'
+  }
+  
+  return text
 }
 
 export function FeaturedPosts({ posts }: FeaturedPostsProps) {
@@ -177,7 +199,7 @@ function FeaturedCard({ post }: { post: FeaturedPost }) {
 
         {/* Content Preview - Hide on mobile */}
         <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground line-clamp-2">
-          {post.summary || post.content}
+          {stripHtmlAndTruncate(post.summary || post.content)}
         </p>
 
         {/* Tags */}
