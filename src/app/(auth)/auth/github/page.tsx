@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Link from "next/link"
 import { toast } from "sonner"
 
-export default function GitHubAuthPage() {
+// Create a client component that uses useSearchParams
+function GitHubAuthContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState<boolean>(false)
@@ -153,5 +154,28 @@ export default function GitHubAuthPage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function GitHubAuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="container flex h-screen items-center justify-center">
+        <Card className="mx-auto max-w-md">
+          <CardHeader>
+            <CardTitle>Sign In with GitHub</CardTitle>
+            <CardDescription>
+              Loading authentication...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <GitHubAuthContent />
+    </Suspense>
   )
 } 
