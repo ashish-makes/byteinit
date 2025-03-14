@@ -340,41 +340,39 @@ export async function getBlogPosts(
         take: 20,
       });
 
-      // Get featured posts only for hot section
+      // Get featured posts for all sections, not just hot
       let featured: BlogPost[] = [];
-      if (activeSection === 'hot' && !topic) {
-        try {
-          featured = await prisma.blog.findMany({
-            where: {
-              ...baseWhere,
-              featured: true,
+      try {
+        featured = await prisma.blog.findMany({
+          where: {
+            ...baseWhere,
+            featured: true,
+          },
+          include: {
+            user: {
+              select: {
+                name: true,
+                image: true,
+                username: true,
+              }
             },
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  image: true,
-                  username: true,
-                }
-              },
-              _count: {
-                select: {
-                  votes: true,
-                  comments: true,
-                  saves: true,
-                  views: true,
-                }
-              },
-              votes: true,
-              saves: true,
+            _count: {
+              select: {
+                votes: true,
+                comments: true,
+                saves: true,
+                views: true,
+              }
             },
-            take: 6,
-          });
-        } catch (featuredError) {
-          console.error('Error fetching featured posts:', featuredError);
-          // Continue with empty featured posts rather than failing
-          featured = [];
-        }
+            votes: true,
+            saves: true,
+          },
+          take: 3,
+        });
+      } catch (featuredError) {
+        console.error('Error fetching featured posts:', featuredError);
+        // Continue with empty featured posts rather than failing
+        featured = [];
       }
 
       return {

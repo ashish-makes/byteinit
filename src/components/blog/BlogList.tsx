@@ -93,11 +93,9 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
         
         // Ensure items and featured are arrays
         setPosts(Array.isArray(data.items) ? data.items : [])
-        setFeatured(
-          section === 'hot' && !topic && Array.isArray(data.featured) 
-            ? data.featured 
-            : []
-        )
+        
+        // Always set featured posts regardless of section
+        setFeatured(Array.isArray(data.featured) ? data.featured : [])
       } catch (error) {
         console.error('Error fetching posts:', error)
         setError('Failed to load posts. Please try again later.')
@@ -122,7 +120,7 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
   if (isLoading) {
     return (
       <div className="space-y-6 py-6">
-        {section === "hot" && <FeaturedPostsSkeleton />}
+        <FeaturedPostsSkeleton />
         <AnimatePresence mode="sync">
           <motion.div className="grid gap-3">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -161,20 +159,16 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
 
   return (
     <div className="w-full">
-      {/* Show featured posts only on hot section */}
-      {activeSection === "hot" && (
+      {/* Show featured posts on all sections if available */}
+      {featured.length > 0 && (
         <AnimatePresence>
-          {isLoading ? (
-            <FeaturedPostsSkeleton />
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <FeaturedPosts posts={featured} />
-            </motion.div>
-          )}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <FeaturedPosts posts={featured} />
+          </motion.div>
         </AnimatePresence>
       )}
       

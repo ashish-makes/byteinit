@@ -9,7 +9,8 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "update-featured": "tsx src/scripts/update-featured-posts.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
@@ -135,6 +136,7 @@
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
     "typescript": "^5"
   },
   "overrides": {
