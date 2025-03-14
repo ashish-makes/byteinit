@@ -25,17 +25,18 @@ interface Post {
     name: string | null
     image: string | null
     username: string | null
-  }
+  } | null
   _count: {
     votes: number
     comments: number
     saves: number
     views: number
   }
-  votes: Array<{ id: string; userId: string; blogId: string; type: "UP" | "DOWN" }>
-  saves: Array<{ id: string; userId: string; blogId: string; createdAt: Date }>
+  votes: Array<{ id: string; userId: string | null; blogId: string; type: "UP" | "DOWN" }>
+  saves: Array<{ id: string; userId: string | null; blogId: string; createdAt: Date }>
   createdAt: Date
   tags: string[]
+  userId?: string | null
 }
 
 // Update the section type to include "following"
@@ -226,11 +227,11 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
       </motion.div>
 
       {/* Posts Grid */}
-      <motion.div className="grid gap-3 p-3">
+      <motion.div className="grid gap-2 p-3">
         <AnimatePresence mode="sync">
           {isLoading ? (
             // Skeleton loading state
-            <motion.div className="grid gap-3">
+            <motion.div className="grid gap-1">
               {Array.from({ length: 6 }).map((_, index) => (
                 <motion.div
                   key={`skeleton-${index}`}
@@ -245,7 +246,7 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
             </motion.div>
           ) : (
             // Actual posts
-            <motion.div className="grid gap-3">
+            <motion.div className="grid gap-1">
               {posts.map((post, index) => (
                 <motion.div
                   key={post.id}

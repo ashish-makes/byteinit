@@ -26,16 +26,17 @@ interface BlogCardProps {
       name: string | null
       image: string | null
       username: string | null
-    }
+    } | null
     _count: {
       votes: number
       comments: number
       saves: number
     }
-    votes: Array<{ type: 'UP' | 'DOWN' }>
-    saves: Array<{ id: string }>
+    votes: Array<{ type: 'UP' | 'DOWN'; userId?: string | null }>
+    saves: Array<{ id: string; userId?: string | null }>
     createdAt: Date
     tags: string[]
+    userId?: string | null
   }
 }
 
@@ -68,7 +69,7 @@ export default function BlogCard({ post }: BlogCardProps) {
   }
 
   return (
-    <Card className="w-full hover:bg-accent/5 transition-colors duration-200 shadow-none border-[0.5px]">
+    <Card className="w-full hover:bg-accent/5 transition-colors duration-200 shadow-none border-[0.5px] mb-2">
       <div className="flex items-start p-4 gap-4">
         <BlogPostActions.Vote 
           post={post} 
@@ -89,10 +90,10 @@ export default function BlogCard({ post }: BlogCardProps) {
           {/* Metadata - Desktop */}
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
             <Avatar className="h-5 w-5">
-              <AvatarImage src={post.user?.image || undefined} />
-              <AvatarFallback>{post.user?.name?.[0]}</AvatarFallback>
+              <AvatarImage src={post.user?.image || ""} />
+              <AvatarFallback>{post.user?.name?.[0] || "A"}</AvatarFallback>
             </Avatar>
-            <span className="truncate">{post.user?.name}</span>
+            <span className="truncate">{post.user?.name || "Anonymous"}</span>
             <span>•</span>
             <TooltipProvider>
               <Tooltip>
@@ -122,10 +123,10 @@ export default function BlogCard({ post }: BlogCardProps) {
           <div className="flex sm:hidden items-center flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5 min-w-fit">
               <Avatar className="h-5 w-5">
-                <AvatarImage src={post.user?.image || undefined} />
-                <AvatarFallback>{post.user?.name?.[0]}</AvatarFallback>
+                <AvatarImage src={post.user?.image || ""} />
+                <AvatarFallback>{post.user?.name?.[0] || "A"}</AvatarFallback>
               </Avatar>
-              <span className="truncate">{post.user?.name}</span>
+              <span className="truncate">{post.user?.name || "Anonymous"}</span>
             </div>
             <span>•</span>
             <TooltipProvider>

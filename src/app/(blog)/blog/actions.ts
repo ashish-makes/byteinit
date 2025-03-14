@@ -5,6 +5,35 @@ import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
 import { categorizeTopic } from '@/lib/topicMatcher'
 
+// Define a type for the blog post that matches the Prisma return type
+type BlogPost = {
+  id: string;
+  title: string;
+  content: string;
+  slug: string;
+  summary: string | null;
+  coverImage: string | null;
+  published: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string | null;  // Allow null for userId
+  featured: boolean;
+  tags: string[];
+  user: {
+    name: string | null;
+    image: string | null;
+    username: string | null;
+  } | null;
+  _count: {
+    votes: number;
+    comments: number;
+    saves: number;
+    views: number;
+  };
+  votes: Array<{ id: string; userId: string | null; blogId: string; type: "UP" | "DOWN" }>;  // Allow null for userId
+  saves: Array<{ id: string; userId: string | null; blogId: string; createdAt: Date }>;  // Allow null for userId
+};
+
 export async function toggleLike(blogId: string) {
   const session = await auth()
   if (!session?.user?.id) {
@@ -12,12 +41,13 @@ export async function toggleLike(blogId: string) {
   }
 
   try {
-    const existingLike = await prisma.blogLike.findUnique({
+    // Fix the composite key issue by using AND condition instead
+    const existingLike = await prisma.blogLike.findFirst({
       where: {
-        blogId_userId: {
-          blogId,
-          userId: session.user.id,
-        },
+        AND: [
+          { blogId },
+          { userId: session.user.id }
+        ]
       },
     })
 
@@ -49,12 +79,13 @@ export async function toggleSave(blogId: string) {
   }
 
   try {
-    const existingSave = await prisma.blogSave.findUnique({
+    // Fix the composite key issue by using AND condition instead
+    const existingSave = await prisma.blogSave.findFirst({
       where: {
-        blogId_userId: {
-          blogId,
-          userId: session.user.id,
-        },
+        AND: [
+          { blogId },
+          { userId: session.user.id }
+        ]
       },
     })
 
@@ -86,12 +117,13 @@ export async function vote(blogId: string, voteType: 'UP' | 'DOWN') {
   }
 
   try {
-    const existingVote = await prisma.blogVote.findUnique({
+    // Fix the composite key issue by using AND condition instead
+    const existingVote = await prisma.blogVote.findFirst({
       where: {
-        blogId_userId: {
-          blogId,
-          userId: session.user.id,
-        },
+        AND: [
+          { blogId },
+          { userId: session.user.id }
+        ]
       },
     })
 
@@ -309,7 +341,7 @@ export async function getBlogPosts(
       });
 
       // Get featured posts only for hot section
-      let featured = [];
+      let featured: BlogPost[] = [];
       if (activeSection === 'hot' && !topic) {
         try {
           featured = await prisma.blog.findMany({
@@ -347,7 +379,7 @@ export async function getBlogPosts(
 
       return {
         items: posts,
-        featured: featured || []
+        featured: featured
       };
     } catch (postsError) {
       console.error('Error fetching posts:', postsError);
@@ -460,12 +492,13 @@ export async function savePost(postId: string) {
   }
 
   try {
-    const existingSave = await prisma.blogSave.findUnique({
+    // Fix the composite key issue by using AND condition instead
+    const existingSave = await prisma.blogSave.findFirst({
       where: {
-        blogId_userId: {
-          blogId: postId,
-          userId: session.user.id,
-        },
+        AND: [
+          { blogId: postId },
+          { userId: session.user.id }
+        ]
       },
     })
 
@@ -519,6 +552,11 @@ export async function addComment(postId: string, content: string, parentId?: str
         }
       }
     });
+
+    // Ensure user is not null before accessing its properties
+    if (!comment.user) {
+      return { error: "Failed to create comment with user data" };
+    }
 
     const serializedComment = {
       id: comment.id,

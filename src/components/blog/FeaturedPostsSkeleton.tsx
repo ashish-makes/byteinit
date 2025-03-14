@@ -9,13 +9,13 @@ export function FeaturedPostsSkeleton() {
       <div className="py-4 sm:py-6 px-3 sm:px-4">
         <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div className="space-y-1">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-3 w-16 bg-muted-foreground/10" />
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-3 w-24 bg-muted-foreground/10" />
           </div>
           <Skeleton className="h-8 w-[70px] rounded-md" />
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
           {[1, 2, 3].map((i) => (
             <FeaturedCardSkeleton key={i} />
           ))}
@@ -28,7 +28,7 @@ export function FeaturedPostsSkeleton() {
 function FeaturedCardSkeleton() {
   return (
     <Card className="relative overflow-hidden h-full border-[0.5px] border-border/40 shadow-none">
-      <div className="p-3 sm:p-4">
+      <div className="p-4">
         {/* Author and Date */}
         <div className="flex items-center gap-2 mb-4">
           <Skeleton className="h-6 w-6 rounded-full" />
@@ -38,23 +38,24 @@ function FeaturedCardSkeleton() {
           </div>
         </div>
 
-        {/* Title */}
-        <div className="space-y-2 mb-4">
-          <Skeleton className="h-5 w-[90%]" />
-          <Skeleton className="h-5 w-[75%]" />
-        </div>
-
-        {/* Content Preview */}
-        <div className="space-y-2 mb-4">
-          <Skeleton className="h-3 w-full bg-muted-foreground/10" />
-          <Skeleton className="h-3 w-[90%] bg-muted-foreground/10" />
-          <Skeleton className="h-3 w-[60%] bg-muted-foreground/10" />
+        {/* Title and Content */}
+        <div className="space-y-4 mb-4">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-[90%]" />
+            <Skeleton className="h-5 w-[75%]" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-full bg-muted-foreground/10" />
+            <Skeleton className="h-3 w-[90%] bg-muted-foreground/10" />
+            <Skeleton className="h-3 w-[60%] bg-muted-foreground/10" />
+          </div>
         </div>
 
         {/* Tags */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           <Skeleton className="h-5 w-16 rounded-full bg-secondary/40" />
           <Skeleton className="h-5 w-20 rounded-full bg-secondary/40" />
+          <Skeleton className="h-5 w-14 rounded-full bg-secondary/40" />
         </div>
 
         {/* Engagement */}

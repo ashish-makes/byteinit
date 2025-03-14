@@ -49,7 +49,6 @@ import {
 import { Metadata } from 'next'
 import { cn } from "@/lib/utils"
 import { TableOfContents } from "@/components/blog/TableOfContents"
-import { headers } from 'next/headers'
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { ImageZoom } from "@/components/blog/ImageZoom"
 import { ContentImageZoom } from "@/components/blog/ContentImageZoom"
@@ -424,49 +423,41 @@ interface BlogPost {
   }>
 }
 
-// Add more structured data types
-function generateStructuredData(post: {
-  title: string
-  summary: string | null
-  coverImage: string | null
-  createdAt: Date
-  updatedAt: Date
-  user: {
-    name: string | null
-    username: string | null
-    bio: string | null
-  }
-  tags: string[]
-  content: string
-  slug: string
-}) {
+// Add this function near the top of the file, after imports
+function generateJsonLd(post: any) {
+  // Add null checks for post.user
+  const userName = post.user?.name || 'Anonymous'
+  const userUsername = post.user?.username || 'anonymous'
+  const userBio = post.user?.bio || ''
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://byteinit.com'
+
   const articleData = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
-    description: post.summary,
-    image: post.coverImage ? [post.coverImage] : [],
+    description: post.summary || '',
+    image: post.coverImage || `${baseUrl}/og-image.jpg`,
     datePublished: post.createdAt.toISOString(),
     dateModified: post.updatedAt.toISOString(),
     author: {
       '@type': 'Person',
-      name: post.user.name,
-      url: `https://yoursite.com/u/${post.user.username}`,
-      description: post.user.bio
+      name: userName,
+      url: `${baseUrl}/u/${userUsername}`,
+      description: userBio
     },
     publisher: {
       '@type': 'Organization',
       name: 'Your Site Name',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://yoursite.com/logo.png',
+        url: `${baseUrl}/logo.png`,
         width: '190',
         height: '60'
       }
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://yoursite.com/blog/${post.slug}`
+      '@id': `${baseUrl}/blog/${post.slug}`
     },
     keywords: post.tags.join(', '),
     articleBody: post.content.replace(/<[^>]*>/g, ''),
@@ -486,19 +477,20 @@ function generateStructuredData(post: {
         '@type': 'ListItem',
         position: 1,
         name: 'Blog',
-        item: 'https://yoursite.com/blog'
+        item: `${baseUrl}/blog`
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: post.title,
-        item: `https://yoursite.com/blog/${post.slug}`
+        item: `${baseUrl}/blog/${post.slug}`
       }
     ]
   }
 
   return [articleData, breadcrumbData]
 }
+
 // Update generateMetadata function
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -506,17 +498,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   
   if (!post) return { title: 'Post Not Found' }
 
-  const headersList = await headers()
-  const host = headersList.get('host')
-  const baseUrl = `https://${host}`
+  // Remove headers() usage and use a hardcoded base URL
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://byteinit.com'
   const readingTime = calculateReadingTime(post.content)
+
+  // Add null checks for post.user
+  const userName = post.user?.name || 'Anonymous'
+  const userUsername = post.user?.username || 'anonymous'
 
   return {
     title: `${post.title} | Your Blog Name`,
     description: post.summary || undefined,
     keywords: post.tags,
-    authors: [{ name: post.user.name || undefined, url: `${baseUrl}/u/${post.user.username}` }],
-    creator: post.user.name || undefined,
+    authors: [{ name: userName, url: `${baseUrl}/u/${userUsername}` }],
+    creator: userName,
     publisher: 'Your Site Name',
     robots: {
       index: true,
@@ -539,7 +534,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       type: 'article',
       publishedTime: post.createdAt.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
-      authors: [`${baseUrl}/u/${post.user.username}`],
+      authors: [`${baseUrl}/u/${userUsername}`],
       tags: post.tags,
       images: post.coverImage ? [
         {
@@ -549,9 +544,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
           alt: post.title,
           type: 'image/jpeg',
         }
-      ] : [],
+      ] : undefined,
+      url: `${baseUrl}/blog/${post.slug}`,
       siteName: 'Your Site Name',
-      locale: 'en_US',
     },
     twitter: {
       card: 'summary_large_image',
@@ -575,7 +570,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     other: {
       'article:published_time': post.createdAt.toISOString(),
       'article:modified_time': post.updatedAt.toISOString(),
-      'article:author': post.user.name || '',
+      'article:author': userName,
       'article:section': post.tags[0] || 'Blog',
       'article:tag': post.tags.join(','),
       'reading-time': `${readingTime} minutes`,
@@ -598,6 +593,9 @@ export async function generateStaticParams() {
 
 // Add revalidation
 export const revalidate = 3600 // Revalidate every hour
+
+// Add dynamic export to make the page dynamic
+export const dynamic = 'force-dynamic'
 
 // First, update the getRelatedPosts function to use proper typing
 async function getRelatedPosts(currentPostId: string, userId: string) {
@@ -930,7 +928,7 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
     let structuredData = {};
     try {
       if (post.user) {
-        structuredData = generateStructuredData({
+        structuredData = generateJsonLd({
           title: post.title,
           summary: post.summary,
           coverImage: post.coverImage,
@@ -988,7 +986,7 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
             {/* Add semantic HTML and microdata */}
             <meta itemProp="headline" content={post.title} />
             <meta itemProp="description" content={post.summary || ''} />
-            <meta itemProp="author" content={post.user.name || ''} />
+            <meta itemProp="author" content={post.user?.name || 'Anonymous'} />
             <meta itemProp="datePublished" content={post.createdAt.toISOString()} />
             <meta itemProp="dateModified" content={post.updatedAt.toISOString()} />
             {post.coverImage && <meta itemProp="image" content={post.coverImage} />}
@@ -1003,23 +1001,23 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
                       {/* Author info and avatar */}
                       <div className="flex items-start gap-3 min-w-0 flex-1">
                         <Avatar className="h-8 w-8 border-2 border-background shadow-sm flex-shrink-0">
-                          <AvatarImage src={post.user.image || ""} alt={post.user.name || ""} />
-                          <AvatarFallback>{post.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                          <AvatarImage src={post.user?.image || ""} alt={post.user?.name || "Anonymous"} />
+                          <AvatarFallback>{post.user?.name?.charAt(0).toUpperCase() || "A"}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 sm:block">
                             <Link 
-                              href={`/u/${post.user.username}`}
+                              href={`/u/${post.user?.username || "anonymous"}`}
                               className="text-sm font-medium hover:underline inline-block"
                             >
-                              {post.user.name}
+                              {post.user?.name || "Anonymous"}
                             </Link>
                             
                             {/* Follow Button - Only visible on mobile */}
-                            {session?.user && !isOwnProfile && (
+                            {session?.user && !isOwnProfile && post.user?.username && (
                               <div className="flex-shrink-0 sm:hidden">
                                 <FollowButton 
-                                  username={post.user.username!} 
+                                  username={post.user.username} 
                                   isFollowing={isFollowing ?? false}
                                   followerCount={followStats.followers}
                                 />
@@ -1036,10 +1034,10 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
                       </div>
 
                       {/* Follow Button - Only visible on larger screens */}
-                      {session?.user && !isOwnProfile && (
+                      {session?.user && !isOwnProfile && post.user?.username && (
                         <div className="hidden sm:block flex-shrink-0">
                           <FollowButton 
-                            username={post.user.username!} 
+                            username={post.user.username} 
                             isFollowing={isFollowing ?? false}
                             followerCount={followStats.followers}
                           />
@@ -1135,18 +1133,18 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
                 <div className="mt-6 pt-4 border-t">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={post.user.image || ""} alt={post.user.name || ""} />
-                      <AvatarFallback>{post.user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarImage src={post.user?.image || ""} alt={post.user?.name || ""} />
+                      <AvatarFallback>{post.user?.name?.charAt(0).toUpperCase() || "A"}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <Link 
-                        href={`/u/${post.user.username}`}
+                        href={`/u/${post.user?.username || "anonymous"}`}
                         className="text-sm font-medium hover:underline"
                       >
-                        {post.user.name}
+                        {post.user?.name || "Anonymous"}
                       </Link>
                       <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                        {post.user.bio || "No bio available"}
+                        {post.user?.bio || "No bio available"}
                       </p>
                     </div>
                   </div>
@@ -1155,7 +1153,7 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
                 {/* Related Posts - Only show if there are posts */}
                 {relatedPosts.length > 0 && (
                   <div className="mt-6 pt-4 border-t">
-                    <h2 className="text-sm font-medium mb-3">More from {post.user.name}</h2>
+                    <h2 className="text-sm font-medium mb-3">More from {post.user?.name}</h2>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {relatedPosts.map((relatedPost) => (
                         <Link 
