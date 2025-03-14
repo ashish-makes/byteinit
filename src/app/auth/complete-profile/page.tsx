@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, GithubIcon, InfoIcon, Mail, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, GithubIcon, InfoIcon, Mail, ArrowLeft, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -117,42 +117,44 @@ export default function CompleteProfile() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
         className="w-full max-w-md"
       >
-        <Card className="w-full border-0 shadow-lg dark:shadow-primary/5 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-sm overflow-hidden">
+        <Card className="w-full border-0 shadow-lg dark:shadow-primary/5 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm overflow-hidden">
           <CardHeader className="space-y-3 pb-6">
             <div className="flex justify-between items-center w-full">
               <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors flex items-center text-sm">
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to home
               </Link>
-              <div className="h-4"></div> {/* Spacer for alignment */}
+              <div className="text-xs text-muted-foreground/70 flex items-center">
+                <ShieldCheck className="h-3 w-3 mr-1" />
+                Secure form
+              </div>
             </div>
             
-            <div className="flex justify-center mb-2">
+            <div className="flex justify-center mb-4 mt-2">
               {session?.user?.image ? (
                 <motion.div 
                   className="relative"
-                  initial={{ scale: 0.9 }}
+                  initial={{ scale: 0.95 }}
                   animate={{ scale: 1 }}
-                  transition={{ duration: 0.5, type: "spring" }}
+                  transition={{ duration: 0.3, type: "spring", stiffness: 150 }}
                 >
-                  <div className="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-primary to-primary/50 blur-sm opacity-70"></div>
                   <Image
                     src={session.user.image}
                     alt="Profile"
                     width={80}
                     height={80}
-                    className="rounded-full border-2 border-white dark:border-zinc-800 relative z-10"
+                    className="rounded-full border-2 border-white dark:border-zinc-800"
                   />
                 </motion.div>
               ) : (
                 <motion.div 
-                  className="w-[80px] h-[80px] bg-gradient-to-tr from-primary to-primary/60 rounded-full flex items-center justify-center shadow-md"
-                  initial={{ scale: 0.9 }}
+                  className="w-[80px] h-[80px] bg-gradient-to-tr from-primary/80 to-primary/60 rounded-full flex items-center justify-center"
+                  initial={{ scale: 0.95 }}
                   animate={{ scale: 1 }}
-                  transition={{ duration: 0.5, type: "spring" }}
+                  transition={{ duration: 0.3, type: "spring", stiffness: 150 }}
                 >
                   <span className="text-2xl font-bold text-white">
                     {session?.user?.name?.charAt(0) || "U"}
@@ -160,7 +162,7 @@ export default function CompleteProfile() {
                 </motion.div>
               )}
             </div>
-            <CardTitle className="text-2xl font-bold text-center text-foreground">Almost there!</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center text-foreground">Complete Your Profile</CardTitle>
             <CardDescription className="text-center text-muted-foreground px-4">
               Welcome, <span className="font-medium text-foreground">{session?.user?.name || "there"}</span>! Please add your email to finish setting up your account.
             </CardDescription>
@@ -168,9 +170,9 @@ export default function CompleteProfile() {
           <CardContent className="space-y-6 pb-8 px-6">
             {error && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
               >
                 <Alert variant="destructive" className="border-red-300/20 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/20 text-red-800 dark:text-red-300">
                   <AlertCircle className="h-4 w-4" />
@@ -182,9 +184,9 @@ export default function CompleteProfile() {
             
             {success && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
               >
                 <Alert className="border-green-300/20 dark:border-green-900/30 bg-green-50/50 dark:bg-green-900/20 text-green-800 dark:text-green-300">
                   <CheckCircle2 className="h-4 w-4" />
@@ -213,7 +215,7 @@ export default function CompleteProfile() {
                   <span>Your Email Address</span>
                   {email && (
                     <span className={`text-xs ${validEmail ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {validEmail ? 'Valid email format' : 'Invalid email format'}
+                      {validEmail ? 'Valid email format ✓' : 'Invalid email format'}
                     </span>
                   )}
                 </Label>
@@ -228,9 +230,10 @@ export default function CompleteProfile() {
                     required
                     disabled={loading || success}
                     className={`pl-9 h-11 bg-background/50 dark:bg-background/30 border-muted-foreground/20 dark:border-muted-foreground/10 focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all duration-200 ${validEmail && email ? 'border-green-500 dark:border-green-500/50' : ''}`}
+                    aria-describedby="email-hint"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground/70 mt-1 px-1 flex items-center">
+                <p id="email-hint" className="text-xs text-muted-foreground/70 mt-1 px-1 flex items-center">
                   <InfoIcon className="h-3 w-3 mr-1 inline" />
                   We'll never share your email with anyone else.
                 </p>
@@ -239,8 +242,9 @@ export default function CompleteProfile() {
               <div className="pt-2">
                 <Button 
                   type="submit" 
-                  className="w-full h-11 font-medium shadow-sm hover:shadow transition-all duration-200 mt-2 relative overflow-hidden" 
+                  className={`w-full h-11 font-medium shadow-sm hover:shadow transition-all duration-200 mt-2 relative overflow-hidden ${!validEmail || !email ? 'opacity-70' : 'opacity-100'}`}
                   disabled={loading || success || !validEmail || !email}
+                  aria-label="Save email and continue"
                 >
                   {loading ? (
                     <>
@@ -257,12 +261,19 @@ export default function CompleteProfile() {
                   )}
                 </Button>
                 
-                <p className="text-center text-xs text-muted-foreground mt-4">
-                  By continuing, you agree to our <Link href="/terms" className="underline hover:text-primary transition-colors">Terms of Service</Link> and <Link href="/privacy" className="underline hover:text-primary transition-colors">Privacy Policy</Link>.
-                </p>
+                <div className="mt-6 pt-4 border-t border-border/30 dark:border-border/10">
+                  <p className="text-center text-xs text-muted-foreground">
+                    By continuing, you agree to our <Link href="/terms" className="underline hover:text-primary transition-colors">Terms of Service</Link> and <Link href="/privacy" className="underline hover:text-primary transition-colors">Privacy Policy</Link>.
+                  </p>
+                </div>
               </div>
             </form>
           </CardContent>
+          <CardFooter className="py-4 px-6 border-t border-border/10 bg-muted/20 flex justify-center">
+            <p className="text-xs text-muted-foreground">
+              Need help? <Link href="/support" className="text-primary hover:underline">Contact Support</Link>
+            </p>
+          </CardFooter>
         </Card>
       </motion.div>
     </div>

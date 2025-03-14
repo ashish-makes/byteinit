@@ -13,7 +13,11 @@ interface Post {
   }
 }
 
-export function StickyHeaderClient({ post }: { post: Post }) {
+export function StickyHeaderClient({ post }: { post: Post | null }) {
+  if (!post) {
+    return null; // Don't render anything if post is null
+  }
+  
   return (
     <StickyHeader 
       post={post} 

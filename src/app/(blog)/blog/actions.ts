@@ -125,29 +125,40 @@ export async function vote(blogId: string, voteType: 'UP' | 'DOWN') {
 }
 
 export async function recordView(blogId: string) {
-  const session = await auth()
-  
-  // Check if view already exists for this user/IP today
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  
-  const existingView = await prisma.blogView.findFirst({
-    where: {
-      blogId,
-      userId: session?.user?.id,
-      createdAt: {
-        gte: today
+  try {
+    const session = await auth()
+    
+    // Check if view already exists for this user/IP today
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    // Only record view if user is logged in
+    if (session?.user?.id) {
+      const existingView = await prisma.blogView.findFirst({
+        where: {
+          blogId,
+          userId: session.user.id,
+          createdAt: {
+            gte: today
+          }
+        }
+      })
+
+      if (!existingView) {
+        await prisma.blogView.create({
+          data: {
+            blogId,
+            userId: session.user.id,
+          },
+        })
       }
     }
-  })
-
-  if (!existingView) {
-    await prisma.blogView.create({
-      data: {
-        blogId,
-        userId: session?.user?.id,
-      },
-    })
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error recording view:', error);
+    // Return success anyway to prevent breaking the page load
+    return { success: false, error: 'Failed to record view' };
   }
 }
 
@@ -158,6 +169,10 @@ export async function getBlogPosts(
   try {
     const session = await auth();
     
+    // Ensure section has a default value if null
+    const activeSection = section || "latest";
+    
+    // Base query with better null handling
     const baseWhere = {
       published: true,
       ...(topic ? {
@@ -190,7 +205,7 @@ export async function getBlogPosts(
           }
         ]
       } : {}),
-      ...(section === 'following' && session?.user?.id ? {
+      ...(activeSection === 'following' && session?.user?.id ? {
         userId: {
           in: await prisma.user.findUnique({
             where: { id: session.user.id },
@@ -202,7 +217,7 @@ export async function getBlogPosts(
 
     let orderBy: any;
     
-    switch (section) {
+    switch (activeSection) {
       case 'featured':
         return {
           items: await prisma.blog.findMany({
@@ -256,20 +271,19 @@ export async function getBlogPosts(
         ];
         break;
       case 'hot':
-      case 'following':
+      default:
+        // Hot is a combination of recent + engagement
         orderBy = [
+          { votes: { _count: 'desc' as const }},
+          { comments: { _count: 'desc' as const }},
           { createdAt: 'desc' as const }
         ];
         break;
-      default:
-        orderBy = [
-          { votes: { _count: 'desc' as const }},
-          { createdAt: 'desc' as const }
-        ];
     }
 
-    const [posts, featured] = await Promise.all([
-      prisma.blog.findMany({
+    // Get posts with proper error handling
+    try {
+      const posts = await prisma.blog.findMany({
         where: baseWhere,
         orderBy,
         include: {
@@ -292,50 +306,64 @@ export async function getBlogPosts(
           saves: true,
         },
         take: 20,
-      }),
-      // Featured posts
-      section === 'hot' ? prisma.blog.findMany({
-        where: {
-          ...baseWhere,
-          createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-          }
-        },
-        orderBy: [
-          { votes: { _count: 'desc' } },
-          { comments: { _count: 'desc' } },
-          { views: { _count: 'desc' } }
-        ],
-        include: {
-          user: {
-            select: {
-              name: true,
-              image: true,
-              username: true,
-            }
-          },
-          _count: {
-            select: {
-              votes: true,
-              comments: true,
-              saves: true,
-              views: true,
-            }
-          },
-          votes: true,
-          saves: true,
-        },
-        take: 6,
-      }) : Promise.resolve([])
-    ])
+      });
 
-    return {
-      items: posts,
-      featured: section === 'hot' ? featured : []
+      // Get featured posts only for hot section
+      let featured = [];
+      if (activeSection === 'hot' && !topic) {
+        try {
+          featured = await prisma.blog.findMany({
+            where: {
+              ...baseWhere,
+              featured: true,
+            },
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  image: true,
+                  username: true,
+                }
+              },
+              _count: {
+                select: {
+                  votes: true,
+                  comments: true,
+                  saves: true,
+                  views: true,
+                }
+              },
+              votes: true,
+              saves: true,
+            },
+            take: 6,
+          });
+        } catch (featuredError) {
+          console.error('Error fetching featured posts:', featuredError);
+          // Continue with empty featured posts rather than failing
+          featured = [];
+        }
+      }
+
+      return {
+        items: posts,
+        featured: featured || []
+      };
+    } catch (postsError) {
+      console.error('Error fetching posts:', postsError);
+      // Return empty arrays instead of failing
+      return {
+        items: [],
+        featured: []
+      };
     }
   } catch (error) {
-    console.error('[GET_BLOG_POSTS] Error:', error)
-    throw new Error('Failed to fetch blog posts')
+    console.error('[BLOG_GET]', error);
+    // Return empty data instead of throwing an error
+    return {
+      items: [],
+      featured: []
+    };
   }
 }
 

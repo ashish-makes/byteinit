@@ -55,6 +55,7 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
   const [featured, setFeatured] = useState<Post[]>([])
   const [isScrolled, setIsScrolled] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const header = document.getElementById("sticky-header")
@@ -77,12 +78,30 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
   useEffect(() => {
     async function fetchPosts() {
       setIsLoading(true)
+      setError(null)
       try {
         const data = await getBlogPosts(section, topic)
-        setPosts(data.items)
-        setFeatured(section === 'hot' && !topic ? data.featured : [])
+        
+        // Handle case where data might be null or undefined
+        if (!data) {
+          console.error('No data returned from getBlogPosts')
+          setPosts([])
+          setFeatured([])
+          return
+        }
+        
+        // Ensure items and featured are arrays
+        setPosts(Array.isArray(data.items) ? data.items : [])
+        setFeatured(
+          section === 'hot' && !topic && Array.isArray(data.featured) 
+            ? data.featured 
+            : []
+        )
       } catch (error) {
         console.error('Error fetching posts:', error)
+        setError('Failed to load posts. Please try again later.')
+        setPosts([])
+        setFeatured([])
       } finally {
         setIsLoading(false)
       }
@@ -118,6 +137,23 @@ export default function BlogList({ section = "latest", tag, topic, userId }: Blo
             ))}
           </motion.div>
         </AnimatePresence>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="text-center space-y-4">
+          <p className="text-red-500 dark:text-red-400">{error}</p>
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.reload()}
+            className="mt-4"
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     )
   }
