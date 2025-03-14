@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { signIn, useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, Coffee, KeyRound, Mail, Chrome} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast, Toaster } from "sonner"
@@ -40,9 +40,46 @@ const devJokes = [
 export default function LoginPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [currentJoke, setCurrentJoke] = useState(devJokes[0])
   const [rememberMe, setRememberMe] = useState(false)
+  const [isGithubProcessing, setIsGithubProcessing] = useState(false)
+  const [error, setError] = useState("")
+  const [linkGitHub, setLinkGitHub] = useState(false)
+  const [lastEmail, setLastEmail] = useState("")
+  
+  const linkWith = searchParams.get("linkWith")
+  
+  // Check for URL error and linkWith parameters
+  useEffect(() => {
+    const errorParam = searchParams.get("error")
+    if (errorParam) {
+      if (errorParam === "OAuthAccountNotLinked") {
+        const email = searchParams.get("email")
+        if (email) {
+          setLastEmail(email)
+        }
+        setError("An account with this email already exists. Sign in with your password first to link your accounts.")
+        setLinkGitHub(true)
+      } else if (errorParam === "CredentialsSignin") {
+        setError("Invalid email/username or password")
+      } else {
+        setError(errorParam)
+      }
+    }
+    
+    // Check if we're coming from GitHub page with link request
+    if (linkWith === "github") {
+      const email = searchParams.get("email")
+      if (email) {
+        setLastEmail(email)
+        setFormData(prev => ({ ...prev, emailOrUsername: email }))
+      }
+      toast.info("Please sign in with your password to link your GitHub account")
+    }
+  }, [searchParams])
+  
   const [formData, setFormData] = useState({
     emailOrUsername: "",
     password: "",
@@ -51,10 +88,15 @@ export default function LoginPage() {
   // Enhanced redirect logic
   useEffect(() => {
     if (status === "authenticated" && session) {
-      console.log("Authentication successful, redirecting to dashboard...")
-      router.replace("/dashboard")
+      // If we're trying to link GitHub, do that now
+      if (linkGitHub) {
+        handleGithubSignIn()
+      } else {
+        console.log("Authentication successful, redirecting to dashboard...")
+        router.replace("/dashboard")
+      }
     }
-  }, [status, session, router])
+  }, [status, session, router, linkGitHub])
 
   // Rotate jokes
   useEffect(() => {
@@ -97,6 +139,9 @@ export default function LoginPage() {
     setIsLoading(true)
   
     try {
+      // Save the email for potential account linking
+      setLastEmail(formData.emailOrUsername)
+      
       const result = await signIn("credentials", {
         emailOrUsername: formData.emailOrUsername.trim(),
         password: formData.password,
@@ -116,9 +161,20 @@ export default function LoginPage() {
   
       if (result?.ok) {
         toast.success("Login successful!")
-        // Wait for session to be fully initialized
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        window.location.href = "/dashboard"
+        
+        // If we're trying to link GitHub account
+        if (linkWith === "github") {
+          setLinkGitHub(true)
+          
+          // Don't redirect yet - we'll do GitHub sign-in after a short delay
+          setTimeout(() => {
+            handleGithubSignIn()
+          }, 1500)
+        } else {
+          // Regular flow - redirect to dashboard
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          window.location.href = "/dashboard"
+        }
       }
     } catch (error) {
       console.error("Unexpected error during login:", error)
@@ -142,7 +198,7 @@ export default function LoginPage() {
   }
 
   const handleGithubSignIn = async () => {
-    setIsLoading(true)
+    setIsGithubProcessing(true)
     try {
       await signIn("github", {
         callbackUrl: "/dashboard",
@@ -151,7 +207,7 @@ export default function LoginPage() {
     } catch (error) {
       console.error("GitHub sign-in error:", error)
       toast.error("Failed to sign in with GitHub")
-      setIsLoading(false)
+      setIsGithubProcessing(false)
     }
   }
 
@@ -175,6 +231,22 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {linkWith === "github" && (
+              <Alert className="mb-4">
+                <AlertTitle>Link GitHub Account</AlertTitle>
+                <AlertDescription>
+                  Sign in with your password to link your GitHub account
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="emailOrUsername">Email or Username</Label>
@@ -234,10 +306,10 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Logging in...
+                    {linkWith === "github" ? "Linking..." : "Logging in..."}
                   </>
                 ) : (
-                  "Login"
+                  linkWith === "github" ? "Sign In & Link GitHub" : "Login"
                 )}
               </Button>
 
@@ -267,9 +339,9 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full dark:bg-zinc-800 dark:border-zinc-700"
                   onClick={handleGithubSignIn}
-                  disabled={isLoading}
+                  disabled={isLoading || isGithubProcessing}
                 >
-                  {isLoading ? (
+                  {isGithubProcessing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <svg
@@ -282,7 +354,7 @@ export default function LoginPage() {
                       ></path>
                     </svg>
                   )}
-                  {isLoading ? "Connecting..." : "GitHub"}
+                  {isGithubProcessing ? "Connecting..." : "GitHub"}
                 </Button>
               </div>
             </form>
