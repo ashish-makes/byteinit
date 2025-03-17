@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import type { SavedResource } from "../../types/resource"
 import { useSession } from "next-auth/react"
+import { savedResourcesEvents } from "./useSavedResourcesListener"
 
 export function useBookmarks() {
   const { data: session } = useSession()
@@ -38,6 +39,9 @@ export function useBookmarks() {
 
       console.log("Processed saved resources:", savedResourcesData)
       setSavedResources(savedResourcesData)
+      
+      // Notify listeners that saved resources have changed
+      savedResourcesEvents.notify()
     } catch (error) {
       console.error("Failed to fetch saved resources:", error)
       toast.error("Could not load saved resources. Please try again later.")
@@ -84,8 +88,11 @@ export function useBookmarks() {
         setSavedResources((prev) => [...prev, responseData])
         toast.success("Resource saved successfully")
       }
+      
+      // Notify listeners that saved resources have changed
+      savedResourcesEvents.notify()
     } catch (error) {
-      console.error("Bookmark toggle error:", error)
+      console.error("Save toggle error:", error)
       toast.error(error instanceof Error ? error.message : "Could not update saved resources")
     }
   }
