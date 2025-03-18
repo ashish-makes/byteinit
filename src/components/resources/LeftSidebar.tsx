@@ -65,19 +65,19 @@ const LeftSidebar = () => {
 
   // Categories based on the ResourceCategory enum in the schema
   const categories: NavItem[] = [
-    { icon: Layout, label: 'Frontend', href: '/resources/category/FRONTEND' },
-    { icon: Server, label: 'Backend', href: '/resources/category/BACKEND' },
-    { icon: Code2, label: 'Fullstack', href: '/resources/category/FULLSTACK' },
-    { icon: Cloud, label: 'DevOps', href: '/resources/category/DEVOPS' },
-    { icon: Smartphone, label: 'Mobile', href: '/resources/category/MOBILE' },
-    { icon: Brain, label: 'AI & ML', href: '/resources/category/AI_ML' },
-    { icon: Database, label: 'Database', href: '/resources/category/DATABASE' },
-    { icon: Shield, label: 'Security', href: '/resources/category/SECURITY' },
-    { icon: Palette, label: 'UI/UX', href: '/resources/category/UI_UX' },
-    { icon: PenTool, label: 'Design', href: '/resources/category/DESIGN' },
-    { icon: Cpu, label: 'Machine Learning', href: '/resources/category/MACHINE_LEARNING' },
-    { icon: Cloud, label: 'Cloud', href: '/resources/category/CLOUD' },
-    { icon: Package, label: 'Other', href: '/resources/category/OTHER' },
+    { icon: Layout, label: 'Frontend', href: '/resources/FRONTEND' },
+    { icon: Server, label: 'Backend', href: '/resources/BACKEND' },
+    { icon: Code2, label: 'Fullstack', href: '/resources/FULLSTACK' },
+    { icon: Cloud, label: 'DevOps', href: '/resources/DEVOPS' },
+    { icon: Smartphone, label: 'Mobile', href: '/resources/MOBILE' },
+    { icon: Brain, label: 'AI & ML', href: '/resources/AI_ML' },
+    { icon: Database, label: 'Database', href: '/resources/DATABASE' },
+    { icon: Shield, label: 'Security', href: '/resources/SECURITY' },
+    { icon: Palette, label: 'UI/UX', href: '/resources/UI_UX' },
+    { icon: PenTool, label: 'Design', href: '/resources/DESIGN' },
+    { icon: Cpu, label: 'Machine Learning', href: '/resources/MACHINE_LEARNING' },
+    { icon: Cloud, label: 'Cloud', href: '/resources/CLOUD' },
+    { icon: Package, label: 'Other', href: '/resources/OTHER' },
   ];
 
   const helpNav: NavItem[] = [

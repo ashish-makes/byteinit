@@ -1,29 +1,30 @@
-"use client"
+import { Metadata } from "next"
+import { ClientResourcesWrapper } from "@/components/resources/ClientResourcesWrapper"
 
-import { useState } from "react"
-import { ResourcesContent } from "@/components/resources/ResourcesContent"
-import { motion } from "framer-motion"
+export const metadata: Metadata = {
+  title: "Trending Resources | ByteInit",
+  description: "Explore resources that are gaining traction in the developer community",
+}
 
+// Server component for better SEO
 export default function TrendingResourcesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [category, setCategory] = useState("ALL")
-  const [type, setType] = useState("ALL")
-  const [tag, setTag] = useState<string | undefined>(undefined)
-  const [sortBy, setSortBy] = useState("trending")
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [totalResources, setTotalResources] = useState(0)
-
   return (
-    <div className="animate-in fade-in duration-300">
-    <ResourcesContent 
-      searchTerm={searchTerm}
-      category={category}
-      type={type}
-      tag={tag}
-      sortBy={sortBy}
-      viewMode={viewMode}
-      onResourcesLoaded={setTotalResources}
-    />
-  </div>
+    <div className="pb-12 px-4 md:px-6 lg:px-8">
+      <div className="space-y-4">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-3xl font-bold">Trending Resources</h1>
+          <p className="text-muted-foreground">
+            Explore resources that are gaining traction in the developer community
+          </p>
+        </div>
+
+        {/* Client component for interactive features */}
+        <ClientResourcesWrapper 
+          defaultCategory="ALL"
+          defaultType="ALL"
+          defaultSortBy="trending"
+        />
+      </div>
+    </div>
   )
 } 

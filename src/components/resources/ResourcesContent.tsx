@@ -110,68 +110,6 @@ export function ResourcesContent({
     await toggleBookmark(resourceId)
   }
 
-  // Get page title based on current filters
-  const getPageTitle = () => {
-    // Check if we're on the home page (all default filters)
-    const isHomePage = category === "ALL" && type === "ALL" && !tag && sortBy.toLowerCase() === "popular";
-    
-    if (isHomePage) {
-      return "Developer Resources";
-    }
-    
-    if (category !== "ALL") {
-      return `${category} Resources`;
-    }
-    
-    if (tag) {
-      return `Resources Tagged "${tag}"`;
-    }
-    
-    switch (sortBy.toLowerCase()) {
-      case "popular":
-        return "Most Popular Resources";
-      case "trending":
-        return "Trending Resources";
-      case "latest":
-        return "Latest Resources";
-      case "new":
-        return "New Resources";
-      default:
-        return "All Resources";
-    }
-  }
-
-  // Get page description based on current filters
-  const getPageDescription = () => {
-    // Check if we're on the home page (all default filters)
-    const isHomePage = category === "ALL" && type === "ALL" && !tag && sortBy.toLowerCase() === "popular";
-    
-    if (isHomePage) {
-      return "Discover and share the best developer tools and resources";
-    }
-    
-    if (category !== "ALL") {
-      return `Explore the best ${category.toLowerCase()} tools and resources for developers`;
-    }
-    
-    if (tag) {
-      return `Browse developer resources tagged with "${tag}"`;
-    }
-    
-    switch (sortBy.toLowerCase()) {
-      case "popular":
-        return "Discover the most popular and widely-used developer tools and resources";
-      case "trending":
-        return "Explore resources that are gaining traction in the developer community";
-      case "latest":
-        return "Stay up to date with the most recently added developer tools and resources";
-      case "new":
-        return "Find newly released and cutting-edge developer tools and resources";
-      default:
-        return "Browse our comprehensive collection of developer tools and resources";
-    }
-  }
-
   // Add staggered animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -198,29 +136,15 @@ export function ResourcesContent({
   };
 
   return (
-    <div className="pb-12 px-4 md:px-6 lg:px-8">
-      <div className="space-y-6">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold">{getPageTitle()}</h1>
-          <p className="text-muted-foreground">
-            {getPageDescription()}
-          </p>
-          {!isLoading && filteredResources.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredResources.length} {filteredResources.length === 1 ? 'resource' : 'resources'}
-            </p>
-          )}
-        </div>
-      </div>
-      
+    <div className="w-full">
       {isLoading ? (
         <motion.div 
           variants={containerVariants}
           initial="hidden"
           animate="visible"
           className={viewMode === "grid" 
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8" 
-            : "space-y-6 mt-8"
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-2" 
+            : "space-y-6 mt-2"
           }
         >
           {Array.from({ length: 6 }).map((_, index) => (
@@ -242,8 +166,8 @@ export function ResourcesContent({
             transition={{ duration: 0.2 }}
             variants={containerVariants}
             className={viewMode === "grid" 
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8" 
-              : "space-y-6 mt-8"
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-2" 
+              : "space-y-6 mt-2"
             }
           >
             {filteredResources.map((resource) => (

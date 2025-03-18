@@ -42,6 +42,8 @@ export default function CategoryResourcesPage() {
     notFound()
   }
   
+  const categoryLabel = getCategoryLabel(categoryParam)
+  
   const [searchTerm, setSearchTerm] = useState("")
   const [category, setCategory] = useState(categoryParam)
   const [type, setType] = useState("ALL")
@@ -56,16 +58,38 @@ export default function CategoryResourcesPage() {
   }, [categoryParam])
 
   return (
-    <div className="animate-in fade-in duration-300">
-      <ResourcesContent 
-        searchTerm={searchTerm}
-        category={category}
-        type={type}
-        tag={tag}
-        sortBy={sortBy}
-        viewMode={viewMode}
-        onResourcesLoaded={setTotalResources}
-      />
+    <div className="pb-12 px-4 md:px-6 lg:px-8">
+      <div className="space-y-4">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-3xl font-bold">{categoryLabel} Resources</h1>
+          <p className="text-muted-foreground">
+            Explore the best {categoryLabel.toLowerCase()} tools and resources for developers
+          </p>
+        </div>
+        
+        {totalResources > 0 && (
+          <p className="text-sm text-muted-foreground mb-2">
+            Showing {totalResources} {totalResources === 1 ? 'resource' : 'resources'}
+          </p>
+        )}
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="w-full"
+        >
+          <ResourcesContent 
+            searchTerm={searchTerm}
+            category={category}
+            type={type}
+            tag={tag}
+            sortBy={sortBy}
+            viewMode={viewMode}
+            onResourcesLoaded={setTotalResources}
+          />
+        </motion.div>
+      </div>
     </div>
   )
 } 

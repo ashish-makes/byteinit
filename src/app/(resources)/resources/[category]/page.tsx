@@ -48,7 +48,7 @@ export function generateStaticParams() {
   }))
 }
 
-export default async function CategoryResourcesPage({
+export default function CategoryResourcesPage({
   params
 }: {
   params: { category: string }
@@ -63,9 +63,23 @@ export default async function CategoryResourcesPage({
   const categoryLabel = getCategoryLabel(categoryParam)
 
   return (
-    <ClientResourcesWrapper 
-      category={categoryParam}
-      categoryLabel={categoryLabel}
-    />
+    <div className="pb-12 px-4 md:px-6 lg:px-8">
+      <div className="space-y-4">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-3xl font-bold">{categoryLabel} Resources</h1>
+          <p className="text-muted-foreground">
+            Explore the best {categoryLabel.toLowerCase()} tools and resources for developers
+          </p>
+        </div>
+        
+        <ClientResourcesWrapper 
+          defaultCategory={categoryParam}
+          defaultType="ALL"
+          defaultSortBy="popular"
+          category={categoryParam}
+          categoryLabel={categoryLabel}
+        />
+      </div>
+    </div>
   )
 }

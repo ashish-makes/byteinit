@@ -1,114 +1,59 @@
-"use client"
+import { Metadata } from "next"
+import { SearchResults } from "@/components/resources/SearchResults"
 
-import { ResourceCard } from "@/components/ui/ResourceCard"
-import { useSavedResources } from "@/contexts/SavedResourcesContext"
-import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+export const metadata: Metadata = {
+  title: "Search Resources | ByteInit",
+  description: "Search for developer tools and resources on ByteInit",
+}
 
-// Client component for the search page
-export default function SearchPage() {
-  const searchParams = useSearchParams()
-  const query = searchParams.get('q') || ''
-  const [resources, setResources] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const { savedResources, toggleSave } = useSavedResources()
-
-  useEffect(() => {
-    if (!query) {
-      setResources([])
-      setLoading(false)
-      return
-    }
-
-    async function fetchSearchResults() {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/resources/search?q=${encodeURIComponent(query)}`)
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch search results')
-        }
-        
-        const data = await response.json()
-        setResources(data.resources || [])
-      } catch (error) {
-        console.error('Error fetching search results:', error)
-        setResources([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchSearchResults()
-  }, [query])
+// Server component for better SEO
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: { q?: string }
+}) {
+  const query = searchParams.q || ''
 
   if (!query) {
-    // Redirect to resources page if no query
     return (
-      <div className="py-6 px-4 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          No Search Query
-        </h1>
-        <p className="text-sm text-muted-foreground mt-2">
-          Please enter a search term to find resources.
-        </p>
+      <div className="pb-12 px-4 md:px-6 lg:px-8">
+        <div className="space-y-4">
+          <div className="flex flex-col space-y-2">
+            <h1 className="text-3xl font-bold">
+              Search
+            </h1>
+            <p className="text-muted-foreground">
+              Enter a search term to find resources
+            </p>
+          </div>
+          
+          <div className="flex-1 flex items-center justify-center min-h-[400px]">
+            <div className="text-center max-w-md p-6">
+              <h2 className="text-2xl font-bold mb-4">No Search Query</h2>
+              <p className="text-muted-foreground mb-6">
+                Please enter a search term to find resources.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="py-6 px-4">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+    <div className="pb-12 px-4 md:px-6 lg:px-8">
+      <div className="space-y-4">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-3xl font-bold">
             Search Results
           </h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            {resources.length} {resources.length === 1 ? 'result' : 'results'} for "{query}"
+          <p className="text-muted-foreground">
+            Search results for "{query}"
           </p>
         </div>
-
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-r-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground mt-4">
-              Searching for resources...
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="grid gap-4">
-              {resources.map((resource) => (
-                <ResourceCard
-                  key={resource.id}
-                  id={resource.id}
-                  title={resource.title}
-                  description={resource.description}
-                  url={resource.url}
-                  type={resource.type}
-                  category={resource.category}
-                  tags={resource.tags}
-                  createdAt={resource.createdAt}
-                  user={resource.user}
-                  isBookmarked={savedResources.has(resource.id)}
-                  likes={resource.likes}
-                  saves={resource.saves}
-                  reactions={resource.reactions}
-                  onBookmarkClick={() => toggleSave(resource.id)}
-                />
-              ))}
-            </div>
-
-            {resources.length === 0 && (
-              <div className="text-center py-12">
-                <h3 className="text-lg font-medium">No results found</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Try searching with different keywords
-                </p>
-              </div>
-            )}
-          </>
-        )}
+        
+        {/* Client component for interactive features */}
+        <SearchResults query={query} />
       </div>
     </div>
   )
