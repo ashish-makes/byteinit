@@ -8,9 +8,28 @@ import {
   DropdownMenuItem, 
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuGroup
 } from '@/components/ui/dropdown-menu'
-import { User, Settings, BookMarked, History, HelpCircle, Plus, Search, X, Menu } from 'lucide-react'
+import { 
+  User, 
+  Settings, 
+  BookMarked, 
+  History, 
+  HelpCircle, 
+  Plus, 
+  Search, 
+  X, 
+  Menu, 
+  LayoutDashboard, 
+  Home,
+  FileText,
+  FolderOpenDot,
+  ExternalLink,
+  Copy,
+  LogOut,
+  CheckCheck
+} from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Link from 'next/link'
 import { useSession } from "next-auth/react"
@@ -20,6 +39,15 @@ import ResourcesMobileNav from "./ResourcesMobileNav"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { ThemeToggle } from "../theme-toggle"
+import { Separator } from "@/components/ui/separator"
+import type { LucideIcon } from 'lucide-react'
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip'
 
 interface ResourcesHeaderProps {
   searchTerm?: string;
@@ -31,6 +59,25 @@ interface ResourcesHeaderProps {
   totalResources?: number;
   className?: string;
 }
+
+interface MenuItemProps {
+  icon: LucideIcon;
+  label: string;
+  description?: string;
+  href: string;
+}
+
+const MenuItem = ({ icon: Icon, label, description, href }: MenuItemProps) => (
+  <Link href={href}>
+    <DropdownMenuItem className="gap-2 cursor-pointer py-2">
+      <Icon className="h-4 w-4" />
+      <div className="flex flex-col">
+        <span>{label}</span>
+        {description && <span className="text-xs text-muted-foreground">{description}</span>}
+      </div>
+    </DropdownMenuItem>
+  </Link>
+);
 
 // ResourcesSearchBar component to match BlogHeader's SearchBar
 function ResourcesSearchBar() {
@@ -77,11 +124,11 @@ function ResourcesSearchBar() {
     <>
       <Button
         variant="outline"
-        className="relative h-9 w-full max-w-2xl justify-start text-muted-foreground hover:text-foreground"
+        className="relative h-9 w-full max-w-2xl justify-start text-muted-foreground hover:text-foreground text-xs sm:text-sm"
         onClick={() => setOpen(true)}
       >
-        <Search className="h-3.5 w-3.5 mr-2" />
-        <span className="inline-flex truncate text-sm">Search resources...</span>
+        <Search className="h-3.5 w-3.5 mr-1 sm:mr-2" />
+        <span className="inline-flex truncate">Search...</span>
         <kbd className="absolute right-2 top-2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
@@ -161,122 +208,216 @@ export function ResourcesHeader({
 }: ResourcesHeaderProps) {
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user
+  const [copied, setCopied] = useState(false)
+
+  const getProfileUrl = () => {
+    const identifier = session?.user?.username || session?.user?.email?.split('@')?.[0] || '';
+    return `/u/${identifier}`;
+  };
+
+  const copyProfileUrl = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      const profileUrl = `${window.location.origin}${getProfileUrl()}`;
+      navigator.clipboard.writeText(profileUrl)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(err => {
+          console.error("Failed to copy: ", err);
+        });
+    } catch (error) {
+      console.error("Copy operation failed: ", error);
+    }
+  };
+
+  const getInitials = () => {
+    if (!session?.user?.name) return "U";
+    return session.user.name.split(' ')
+      .map(part => part.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join('');
+  };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center justify-between h-11 px-2 gap-2">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden">
+      <div className="flex items-center justify-between h-11 px-2 gap-1 max-w-full">
         {/* Logo Section - More compact */}
-        <div className="flex items-center gap-1.5 min-w-fit">
+        <div className="flex items-center gap-1 min-w-fit">
           <ResourcesMobileNav />
-          <Link href="/resources" className="font-semibold text-sm whitespace-nowrap">
-            Byteinit
+          <Link href="/" className="font-semibold text-sm whitespace-nowrap flex items-center gap-1">
+            <Home className="h-3.5 w-3.5" />
+            <span>Byteinit</span>
+          </Link>
+          <Link href="/resources" className="text-xs text-muted-foreground ml-1 hidden sm:block">
+            <span>Resources</span>
+          </Link>
+          <Link href="/blog" className="text-xs text-muted-foreground ml-1 hidden sm:block">
+            <span>Blog</span>
           </Link>
         </div>
 
-        {/* Search - Using ResourcesSearchBar component */}
-        <div className="flex-1 max-w-md mx-auto px-1">
+        {/* Search - Make it more adaptive */}
+        <div className="flex-1 max-w-[45%] sm:max-w-md mx-auto px-1">
           <ResourcesSearchBar />
         </div>
 
         {/* Actions - More compact */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 ml-1">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+          
           {isLoggedIn ? (
             <>
-              {/* Mobile Add Resource Button */}
-              <Button
-                variant="default"
-                size="icon"
-                className="h-7 w-7 rounded-full sm:hidden"
-                asChild
-              >
-                <Link href="/resources/submit">
-                  <Plus className="h-3.5 w-3.5" />
-                  <span className="sr-only">Submit resource</span>
-                </Link>
-              </Button>
-
-              {/* Desktop Add Resource Button */}
-              <Button
-                variant="default"
-                size="sm"
-                className="gap-1.5 hidden sm:flex h-7 text-xs"
-                asChild
-              >
-                <Link href="/resources/submit">
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Add Resource</span>
-                </Link>
-              </Button>
+              {/* Add Resource Button with Tooltip */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="default"
+                      size="icon"
+                      className="h-7 w-7 rounded-full"
+                      asChild
+                    >
+                      <Link href="/resources/submit">
+                        <Plus className="h-3.5 w-3.5" />
+                        <span className="sr-only">Add resource</span>
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add Resource</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               {/* Profile Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    size="icon" 
-                    className="h-7 w-7 rounded-full"
+                    size="sm"
+                    className="h-7 px-2 rounded-md flex items-center"
                   >
-                    <Avatar className="h-7 w-7 cursor-pointer hover:opacity-80 transition">
-                      <AvatarImage src={session.user.image || ''} alt={session.user.name || ''} />
-                      <AvatarFallback>
-                        {session.user.name?.[0] || <User className="h-3.5 w-3.5" />}
-                      </AvatarFallback>
+                    <Avatar className="h-6 w-6 border border-border">
+                      {session.user?.image ? (
+                        <AvatarImage src={session.user.image} alt={session.user?.name || 'Profile'} />
+                      ) : (
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                          {getInitials()}
+                        </AvatarFallback>
+                      )}
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52 mt-1">
-                  <DropdownMenuLabel className="flex items-center gap-2 p-2">
-                    <div className="flex flex-col gap-0.5">
-                      <p className="text-xs font-medium leading-none truncate">
-                        {session?.user.name}
-                      </p>
-                      <p className="text-[10px] leading-none text-muted-foreground truncate">
-                        {session?.user.email}
-                      </p>
+                <DropdownMenuContent align="end" className="w-56 p-1">
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="relative">
+                      <Avatar className="h-10 w-10 border border-border">
+                        {session.user?.image ? (
+                          <AvatarImage src={session.user.image} alt={session.user?.name || 'Profile'} />
+                        ) : (
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {getInitials()}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background"></span>
                     </div>
-                  </DropdownMenuLabel>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium leading-none">{session.user?.name || 'User'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
+                    </div>
+                  </div>
+                  
                   <DropdownMenuSeparator />
                   
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/profile" className="flex items-center text-xs">
-                      <User className="mr-2 h-3.5 w-3.5" />
-                      Your Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/resources/bookmarks" className="flex items-center text-xs">
-                      <BookMarked className="mr-2 h-3.5 w-3.5" />
-                      Saved Resources
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/resources/history" className="flex items-center text-xs">
-                      <History className="mr-2 h-3.5 w-3.5" />
-                      History
-                    </Link>
-                  </DropdownMenuItem>
-
+                  <DropdownMenuGroup>
+                    <MenuItem 
+                      icon={LayoutDashboard} 
+                      label="Dashboard" 
+                      href="/dashboard" 
+                    />
+                    {/* Public Profile with Copy Button */}
+                    <div className="relative">
+                      <Link href={getProfileUrl()}>
+                        <DropdownMenuItem className="gap-2 cursor-pointer py-2 pr-10">
+                          <ExternalLink className="h-4 w-4" />
+                          <span>Public Profile</span>
+                        </DropdownMenuItem>
+                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6"
+                        onClick={copyProfileUrl}
+                      >
+                        {copied ? 
+                          <CheckCheck className="h-3.5 w-3.5 text-green-500" /> : 
+                          <Copy className="h-3.5 w-3.5 opacity-70" />
+                        }
+                      </Button>
+                    </div>
+                  </DropdownMenuGroup>
+                  
                   <DropdownMenuSeparator />
                   
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center text-xs">
-                      <Settings className="mr-2 h-3.5 w-3.5" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/help" className="flex items-center text-xs">
-                      <HelpCircle className="mr-2 h-3.5 w-3.5" />
-                      Help Center
-                    </Link>
-                  </DropdownMenuItem>
-
+                  <DropdownMenuGroup>
+                    <MenuItem 
+                      icon={FileText} 
+                      label="My Articles" 
+                      href="/dashboard/blog" 
+                    />
+                    <MenuItem 
+                      icon={FolderOpenDot} 
+                      label="My Resources" 
+                      href="/dashboard/resources" 
+                    />
+                  </DropdownMenuGroup>
+                  
                   <DropdownMenuSeparator />
                   
-                  <DropdownMenuItem asChild className="text-red-500 text-xs">
-                    <Link href="/api/auth/signout" className="w-full">
-                      Sign Out
-                    </Link>
+                  <DropdownMenuGroup>
+                    <MenuItem 
+                      icon={BookMarked} 
+                      label="Saved Resources" 
+                      href="/resources/bookmarks" 
+                    />
+                    <MenuItem 
+                      icon={History} 
+                      label="History" 
+                      href="/resources/history" 
+                    />
+                  </DropdownMenuGroup>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuGroup>
+                    <MenuItem 
+                      icon={Settings} 
+                      label="Settings" 
+                      href="/profile" 
+                    />
+                    <MenuItem 
+                      icon={HelpCircle} 
+                      label="Help Center" 
+                      href="/help" 
+                    />
+                  </DropdownMenuGroup>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem 
+                    className="gap-2 text-red-600 cursor-pointer focus:text-red-600 py-2"
+                    onClick={() => {
+                      window.location.href = '/api/auth/signout';
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -306,4 +447,7 @@ export function ResourcesHeader({
       </div>
     </header>
   )
-} 
+}
+
+// Add default export for consistency
+export default ResourcesHeader; 

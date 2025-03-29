@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/prisma';
 import { auth } from '@/auth';
 import { InteractionType } from '@prisma/client';
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(
   request: NextRequest, 
@@ -51,134 +52,122 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest, 
-  context: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id: resourceId } = await context.params;
-  const userId = session.user.id;
-
   try {
-    // First, get the resource to check the owner
+    // Get the resource to check ownership
     const resource = await prisma.resource.findUnique({
-      where: { id: resourceId },
-      select: { 
-        id: true, 
-        title: true, 
-        userId: true 
-      }
+      where: { id: params.id },
+      select: { userId: true },
     });
 
     if (!resource) {
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
     }
 
-    const existingLike = await prisma.resourceInteraction.findUnique({
+    // Create or update interaction
+    const interaction = await prisma.resourceInteraction.upsert({
       where: {
         resourceId_userId_type: {
-          resourceId,
-          userId,
-          type: InteractionType.LIKE,
+          resourceId: params.id,
+          userId: session.user.id,
+          type: 'LIKE',
+        },
+      },
+      update: {},
+      create: {
+        resourceId: params.id,
+        userId: session.user.id,
+        type: 'LIKE',
+      },
+    });
+
+    // Update resource likes count
+    await prisma.resource.update({
+      where: { id: params.id },
+      data: { likes: { increment: 1 } },
+    });
+
+    // Create notification for resource owner
+    if (resource.userId !== session.user.id) {
+      await createNotification({
+        userId: resource.userId,
+        actionUserId: session.user.id,
+        type: 'RESOURCE_LIKE',
+        resourceId: params.id,
+      });
+    }
+
+    return NextResponse.json(interaction);
+  } catch (error) {
+    console.error('Error liking resource:', error);
+    return NextResponse.json(
+      { error: 'Failed to like resource' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    // Get the resource to check ownership
+    const resource = await prisma.resource.findUnique({
+      where: { id: params.id },
+      select: { userId: true },
+    });
+
+    if (!resource) {
+      return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
+    }
+
+    // Delete interaction
+    await prisma.resourceInteraction.delete({
+      where: {
+        resourceId_userId_type: {
+          resourceId: params.id,
+          userId: session.user.id,
+          type: 'LIKE',
         },
       },
     });
 
-    if (existingLike) {
-      // Unlike flow
-      await prisma.$transaction([
-        prisma.resourceInteraction.delete({
-          where: {
-            resourceId_userId_type: {
-              resourceId,
-              userId,
-              type: InteractionType.LIKE,
-            },
-          },
-        }),
-        prisma.resource.update({
-          where: { id: resourceId },
-          data: { likes: { decrement: 1 } },
-        }),
-        // Optionally remove notification
-        ...(resource.userId !== userId ? [
-          prisma.notification.deleteMany({
-            where: {
-              resourceId,
-              userId: resource.userId,
-              actionUserId: userId,
-              type: 'LIKE'
-            }
-          })
-        ] : [])
-      ]);
+    // Update resource likes count
+    await prisma.resource.update({
+      where: { id: params.id },
+      data: { likes: { decrement: 1 } },
+    });
 
-      // Count total likes after unlike
-      const likes = await prisma.resourceInteraction.count({
+    // Delete notification if it exists
+    if (resource.userId !== session.user.id) {
+      await prisma.notification.deleteMany({
         where: {
-          resourceId,
-          type: InteractionType.LIKE,
+          resourceId: params.id,
+          userId: resource.userId,
+          actionUserId: session.user.id,
+          type: 'RESOURCE_LIKE',
         },
-      });
-
-      return NextResponse.json({ 
-        liked: false, 
-        likes,
-        message: 'Like removed',
-      });
-    } else {
-      // Like flow
-      await prisma.$transaction([
-        prisma.resourceInteraction.create({
-          data: {
-            resourceId,
-            userId,
-            type: InteractionType.LIKE,
-          },
-        }),
-        prisma.resource.update({
-          where: { id: resourceId },
-          data: { likes: { increment: 1 } },
-        }),
-        // Create notification only if not liking own resource
-        ...(resource.userId !== userId ? [
-          prisma.notification.create({
-            data: {
-              userId: resource.userId,
-              resourceId,
-              actionUserId: userId,
-              type: 'LIKE',
-              message: `liked your resource "${resource.title}"`,
-              read: false
-            }
-          })
-        ] : [])
-      ]);
-
-      // Count total likes after like
-      const likes = await prisma.resourceInteraction.count({
-        where: {
-          resourceId,
-          type: InteractionType.LIKE,
-        },
-      });
-
-      return NextResponse.json({ 
-        liked: true, 
-        likes,
-        message: 'Like added',
       });
     }
+
+    return NextResponse.json({ message: 'Resource unliked' });
   } catch (error) {
-    console.error('Error toggling like:', error);
+    console.error('Error unliking resource:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to toggle like', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
-      }, 
+      { error: 'Failed to unlike resource' },
       { status: 500 }
     );
   }

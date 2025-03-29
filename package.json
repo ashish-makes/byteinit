@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "test": "jest",
     "test:watch": "jest --watch",
-    "update-featured": "tsx src/scripts/update-featured-posts.ts"
+    "update-featured": "tsx src/scripts/update-featured-posts.ts",
+    "prisma:generate": "taskkill /F /IM node.exe 2>nul || true && rm -r -force node_modules/.prisma 2>nul || true && npx prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
@@ -42,6 +43,7 @@
     "@radix-ui/react-toast": "^1.2.4",
     "@radix-ui/react-toggle": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",
+    "@studio-freight/lenis": "^1.0.42",
     "@tailwindcss/typography": "^0.5.16",
     "@tiptap/extension-bubble-menu": "^2.11.5",
     "@tiptap/extension-code-block-lowlight": "^2.11.5",
@@ -83,6 +85,7 @@
     "highlight.js": "^11.11.1",
     "imagekit": "^6.0.0",
     "isomorphic-dompurify": "^2.22.0",
+    "locomotive-scroll": "^4.1.4",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.473.0",
     "marked": "^15.0.7",
@@ -102,6 +105,7 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.54.2",
     "react-icons": "^5.5.0",
+    "react-intersection-observer": "^9.16.0",
     "recharts": "^2.15.1",
     "rss": "^1.2.2",
     "slugify": "^1.6.6",
@@ -133,7 +137,7 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8",
-    "prisma": "^6.2.1",
+    "prisma": "^6.5.0",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.3",

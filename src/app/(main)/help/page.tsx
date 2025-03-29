@@ -39,8 +39,7 @@ const helpSections = [
     title: "Account Settings",
     links: [
       { title: "Profile Management", href: "/help/profile" },
-      { title: "Privacy Settings", href: "/help/privacy" },
-      { title: "Notifications", href: "/help/notifications" }
+      { title: "Privacy Settings", href: "/help/privacy" }
     ]
   },
   {
@@ -62,6 +61,17 @@ const helpSections = [
     ]
   }
 ]
+
+const helpTopics = [
+  { title: "Getting Started", href: "/help/getting-started" },
+  { title: "Account Settings", href: "/help/account-settings" },
+  { title: "Resources", href: "/help/resources" },
+  { title: "Blog Posts", href: "/help/blog-posts" },
+  { title: "Profile", href: "/help/profile" },
+  { title: "Privacy", href: "/help/privacy" },
+  { title: "Terms", href: "/help/terms" },
+  { title: "Contact", href: "/help/contact" },
+];
 
 export default function HelpCenter() {
   return (

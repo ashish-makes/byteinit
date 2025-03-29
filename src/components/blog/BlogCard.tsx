@@ -14,6 +14,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { BlogReactions } from "./BlogReactions"
+import { UserHoverCard } from "@/components/UserHoverCard"
 
 interface BlogCardProps {
   post: {
@@ -93,7 +95,9 @@ export default function BlogCard({ post }: BlogCardProps) {
               <AvatarImage src={post.user?.image || ""} />
               <AvatarFallback>{post.user?.name?.[0] || "A"}</AvatarFallback>
             </Avatar>
-            <span className="truncate">{post.user?.name || "Anonymous"}</span>
+            <UserHoverCard username={post.user?.username || null}>
+              <span className="truncate cursor-pointer hover:text-foreground transition-colors">{post.user?.name || "Anonymous"}</span>
+            </UserHoverCard>
             <span>•</span>
             <TooltipProvider>
               <Tooltip>
@@ -126,7 +130,9 @@ export default function BlogCard({ post }: BlogCardProps) {
                 <AvatarImage src={post.user?.image || ""} />
                 <AvatarFallback>{post.user?.name?.[0] || "A"}</AvatarFallback>
               </Avatar>
-              <span className="truncate">{post.user?.name || "Anonymous"}</span>
+              <UserHoverCard username={post.user?.username || null}>
+                <span className="truncate cursor-pointer hover:text-foreground transition-colors">{post.user?.name || "Anonymous"}</span>
+              </UserHoverCard>
             </div>
             <span>•</span>
             <TooltipProvider>
@@ -149,6 +155,9 @@ export default function BlogCard({ post }: BlogCardProps) {
               <span>{post._count.comments}</span>
             </div>
           </div>
+
+          {/* Add BlogReactions component without counts */}
+          <BlogReactions slug={post.slug} variant="stacked" className="mt-2" />
 
           <div className="flex items-center justify-between pt-2">
             <div className="flex flex-wrap gap-1 max-w-[85%]">

@@ -866,12 +866,6 @@ export default function Dashboard() {
                 Here&apos;s what&apos;s happening with your content
               </p>
             </div>
-            <Button asChild variant="outline" className="gap-2">
-              <Link href="/dashboard/new">
-                <FileText className="h-4 w-4" />
-                Create New Post
-              </Link>
-            </Button>
           </div>
 
           {/* Update the Quick Actions Panel */}

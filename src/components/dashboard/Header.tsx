@@ -1,6 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
-import { Menu, Plus, Library, User, BookMarked, BarChart, Link2, Settings, FileText, FileUp } from 'lucide-react';
+import { 
+  Menu, 
+  Plus, 
+  Library, 
+  User, 
+  Bookmark, 
+  FolderOpen,
+  ExternalLink, 
+  Settings, 
+  FileText, 
+  FileUp, 
+  BellRing,
+  LogOut,
+  LayoutDashboard,
+  ChevronDown,
+  PenLine,
+  LucideIcon,
+  Copy,
+  CheckCheck
+} from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,23 +29,67 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import { ThemeToggle } from '../ui/theme-toggle';
 import { DynamicBreadcrumbs } from '@/components/ui/DynamicBreadcrumbs';
-import { NotificationsDropdown } from '@/components/ui/Notification';
+import NotificationBell from '@/components/ui/NotificationBell';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+
+interface MenuItemProps {
+  icon: LucideIcon;
+  label: string;
+  description?: string;
+  href: string;
+  iconColor?: string;
+}
 
 const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
   const { data: session, status } = useSession();
+  const [copied, setCopied] = useState(false);
 
   const getProfileUrl = () => {
     const identifier = session?.user?.username || session?.user?.email?.split('@')[0] || '';
-    return `/${identifier}`;
+    return `/u/${identifier}`;
   };
+
+  const copyProfileUrl = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const profileUrl = `${window.location.origin}${getProfileUrl()}`;
+    navigator.clipboard.writeText(profileUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const getInitials = () => {
+    if (!session?.user?.name) return "U";
+    return session.user.name.split(' ')
+      .map(part => part.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join('');
+  };
+
+  const MenuItem = ({ icon: Icon, label, description, href, iconColor = "currentColor" }: MenuItemProps) => (
+    <Link href={href}>
+      <DropdownMenuItem className="gap-2 cursor-pointer py-2">
+        <Icon className="h-4 w-4" style={{ color: iconColor }} />
+        <div className="flex flex-col">
+          <span>{label}</span>
+          {description && <span className="text-xs text-muted-foreground">{description}</span>}
+        </div>
+      </DropdownMenuItem>
+    </Link>
+  );
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
         {/* Left Side: Logo and Mobile Menu */}
         <div className="flex items-center gap-4">
           {/* Mobile Menu Button */}
@@ -39,13 +102,13 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
             <Menu className="h-5 w-5" />
           </Button>
 
-{/* Logo (Visible only on mobile) */}
-<Link href="/" className="flex items-center gap-2 lg:hidden">
-  <div className="p-1 bg-primary/10 rounded-lg">
-    <Library className="h-5 w-5 text-primary" />
-  </div>
-  <span className="font-semibold">Byteinit</span>
-</Link>
+          {/* Logo (Visible only on mobile) */}
+          <Link href="/" className="flex items-center gap-2 lg:hidden">
+            <div className="p-1 bg-primary/10 rounded-lg">
+              <Library className="h-5 w-5 text-primary" />
+            </div>
+            <span className="font-semibold">Byteinit</span>
+          </Link>
 
           {/* Breadcrumbs (Desktop) */}
           <div className="hidden lg:flex items-center gap-2">
@@ -54,140 +117,190 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
         </div>
 
         {/* Right Side: Actions and User Menu */}
-        <div className="flex items-center gap-2 sm:gap-4">
-          {/* Desktop Add Button */}
+        <div className="flex items-center gap-1">
+          {/* Desktop Create Button */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="default"
-                className="gap-2 hidden sm:flex"
+                className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-primary/90 to-primary"
                 size="sm"
               >
                 <Plus className="h-4 w-4" />
-                Add New
+                Create
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <Link href="/dashboard/resources/new">
-                <DropdownMenuItem className="gap-2">
-                  <FileUp className="h-4 w-4" />
-                  Add Resource
-                </DropdownMenuItem>
-              </Link>
-              <Link href="/dashboard/blog/new">
-                <DropdownMenuItem className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  Write Blog Post
-                </DropdownMenuItem>
-              </Link>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Create New</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <MenuItem 
+                  icon={FileUp} 
+                  label="Resource" 
+                  description="Upload learning materials" 
+                  href="/dashboard/resources/new" 
+                  iconColor="#6366f1"
+                />
+                <MenuItem 
+                  icon={PenLine} 
+                  label="Blog Post" 
+                  description="Write an article" 
+                  href="/dashboard/blog/new" 
+                  iconColor="#3b82f6"
+                />
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Mobile Add Button */}
+          {/* Mobile Create Button */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="default"
-                className="h-8 w-8 rounded-full p-0 sm:hidden"
+                size="icon"
+                className="h-9 w-9 rounded-full p-0 sm:hidden bg-primary"
               >
                 <Plus className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <Link href="/dashboard/resources/new">
-                <DropdownMenuItem className="gap-2">
-                  <FileUp className="h-4 w-4" />
-                  Add Resource
-                </DropdownMenuItem>
-              </Link>
-              <Link href="/dashboard/blog/new">
-                <DropdownMenuItem className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  Write Blog Post
-                </DropdownMenuItem>
-              </Link>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Create New</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <MenuItem 
+                icon={FileUp} 
+                label="Resource" 
+                description="Upload learning materials" 
+                href="/dashboard/resources/new" 
+                iconColor="#6366f1"
+              />
+              <MenuItem 
+                icon={PenLine} 
+                label="Blog Post" 
+                description="Write an article" 
+                href="/dashboard/blog/new" 
+                iconColor="#3b82f6"
+              />
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Notifications Dropdown */}
-          <NotificationsDropdown />
 
           {/* Theme Toggle */}
           <ThemeToggle />
 
+          {/* Notifications */}
+          {session && (
+            <NotificationBell />
+          )}
+
+          {/* Separator */}
+          <Separator orientation="vertical" className="h-6 hidden sm:block mx-1" />
+          
           {/* User Dropdown or Login Button */}
           {status === 'loading' ? (
-            <div className="h-8 w-8 animate-pulse rounded-full bg-primary/10" />
+            <div className="h-9 w-9 animate-pulse rounded-full bg-primary/10" />
           ) : session ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="relative h-8 w-8 rounded-full p-0 overflow-hidden"
+                  className="px-2 relative rounded-full h-9 flex items-center gap-2"
                 >
-                  {session.user?.image ? (
-                    <Image
-                      src={session.user.image}
-                      alt={session.user?.name || 'Profile'}
-                      className="object-cover"
-                      fill
-                      sizes="32px"
-                      priority
-                    />
-                  ) : (
-                    <User className="h-4 w-4" />
-                  )}
+                  <Avatar className="h-8 w-8 border border-border">
+                    {session.user?.image ? (
+                      <AvatarImage src={session.user.image} alt={session.user?.name || 'Profile'} />
+                    ) : (
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getInitials()}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="hidden md:block text-left">
+                    <p className="text-sm font-medium leading-none">{session.user?.name || 'User'}</p>
+                    <p className="text-xs text-muted-foreground truncate max-w-[100px]">{session.user?.email?.split('@')[0]}</p>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground hidden md:block" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="py-2">
-                  <p className="text-sm font-medium truncate">
-                    {session.user?.name || 'User'}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {session.user?.email}
-                  </p>
-                </DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="relative">
+                    <Avatar className="h-10 w-10 border border-border">
+                      {session.user?.image ? (
+                        <AvatarImage src={session.user.image} alt={session.user?.name || 'Profile'} />
+                      ) : (
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {getInitials()}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background"></span>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium leading-none">{session.user?.name || 'User'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
+                  </div>
+                </div>
+                
                 <DropdownMenuSeparator />
-                <Link href="/dashboard/profile">
-                  <DropdownMenuItem className="gap-2">
-                    <Settings className="h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
-                </Link>
-                <Link href={getProfileUrl()}>
-                  <DropdownMenuItem className="gap-2">
-                    <Link2 className="h-4 w-4" />
-                    Public Profile
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/dashboard/blog/posts">
-                  <DropdownMenuItem className="gap-2">
-                    <FileText className="h-4 w-4" />
-                    My Blog Posts
-                  </DropdownMenuItem>
-                </Link>
-                <DropdownMenuItem className="gap-2">
-                  <BookMarked className="h-4 w-4" />
-                  Saved Resources
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2">
-                  <BarChart className="h-4 w-4" />
-                  Analytics
-                </DropdownMenuItem>
+                
+                <DropdownMenuGroup>
+                  <MenuItem 
+                    icon={LayoutDashboard} 
+                    label="Dashboard" 
+                    href="/dashboard" 
+                  />
+                  <div className="relative">
+                    <Link href={getProfileUrl()}>
+                      <DropdownMenuItem className="gap-2 cursor-pointer py-2 pr-10">
+                        <ExternalLink className="h-4 w-4" />
+                        <span>Public Profile</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6"
+                      onClick={copyProfileUrl}
+                    >
+                      {copied ? <CheckCheck className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5 opacity-70" />}
+                    </Button>
+                  </div>
+                </DropdownMenuGroup>
+                
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => signOut()}
-                  className="text-red-600 gap-2"
-                >
-                  <User className="h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
+                
+                <DropdownMenuGroup>
+                  <MenuItem 
+                    icon={FileText} 
+                    label="My Articles" 
+                    href="/dashboard/blog" 
+                  />
+                  <MenuItem 
+                    icon={FolderOpen} 
+                    label="My Resources" 
+                    href="/dashboard/resources" 
+                  />
+                </DropdownMenuGroup>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuGroup>
+                  <MenuItem 
+                    icon={Settings} 
+                    label="Settings" 
+                    href="/dashboard/profile" 
+                  />
+                  <DropdownMenuItem
+                    onClick={() => signOut()}
+                    className="gap-2 text-red-600 cursor-pointer focus:text-red-600 py-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <div>Logout</div>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="ghost" size="sm" onClick={() => signIn()}>
-              Login
+            <Button variant="default" size="sm" onClick={() => signIn()}>
+              Sign In
             </Button>
           )}
         </div>

@@ -55,6 +55,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react"
 import { PlusCircleIcon, MessageSquareIcon } from "lucide-react"
+import { UserHoverCard } from "@/components/UserHoverCard"
 
 type SortOption = "newest" | "oldest" | "most_reactions" | "most_replies"
 
@@ -272,12 +273,14 @@ function CommentCard({
         <div className="flex flex-col gap-1.5 sm:gap-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-baseline gap-x-2 text-xs sm:text-sm">
-              <Link 
-                href={`/u/${comment.user.username}`}
-                className="font-medium hover:underline line-clamp-1"
-              >
-                {comment.user.name}
-              </Link>
+              <UserHoverCard username={comment.user.username || null}>
+                <Link 
+                  href={`/u/${comment.user.username}`}
+                  className="font-medium hover:underline line-clamp-1"
+                >
+                  {comment.user.name}
+                </Link>
+              </UserHoverCard>
               <span className="text-xs text-muted-foreground">
                 {formatDistanceToNowStrict(new Date(comment.createdAt))} ago
               </span>

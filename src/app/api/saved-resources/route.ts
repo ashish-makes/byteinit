@@ -2,10 +2,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/prisma"
 import { auth } from "@/auth"
+import { createNotification } from '@/lib/notifications'
 
 export async function POST(req: NextRequest) {
   const session = await auth()
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -41,69 +42,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Resource already saved" }, { status: 400 })
     }
 
-    // Perform transaction
-    const transactionResult = await prisma.$transaction(async (prisma) => {
-      // Increment the saves counter
-      await prisma.resource.update({
-        where: { id: resourceId },
-        data: { saves: { increment: 1 } }
-      });
-
-      // Create notification if needed
-      let notification;
-      if (resource.userId !== session.user.id) {
-        notification = await prisma.notification.create({
-          data: {
-            userId: resource.userId,
-            resourceId,
-            actionUserId: session.user.id,
-            type: "SAVE",
-            message: `saved your resource "${resource.title}"`,
-            read: false,
-          },
-        })
-      }
-
-      // Create saved resource
-      const savedResource = await prisma.savedResource.create({
-        data: {
+    // Create or update saved resource
+    const savedResource = await prisma.savedResource.upsert({
+      where: {
+        userId_resourceId: {
           userId: session.user.id,
-          resourceId,
+          resourceId: resourceId,
         },
-        include: {
-          resource: {
-            include: {
-              user: {
-                select: {
-                  name: true,
-                  image: true,
-                },
-              },
-            },
-          },
-        },
-      })
+      },
+      update: {},
+      create: {
+        userId: session.user.id,
+        resourceId: resourceId,
+      },
+    });
 
-      return { savedResource, notification }
-    })
-
-    // Verify transaction result
-    if (!transactionResult.savedResource) {
-      console.error("No saved resource created")
-      return NextResponse.json({ error: "Failed to save resource" }, { status: 500 })
+    // Create notification for resource owner
+    if (resource.userId !== session.user.id) {
+      await createNotification({
+        userId: resource.userId,
+        actionUserId: session.user.id,
+        type: 'RESOURCE_SAVE',
+        resourceId: resourceId,
+      });
     }
 
-    // Safely serialize the saved resource
-    const serializableSavedResource = JSON.parse(JSON.stringify(
-      transactionResult.savedResource, 
-      (key, value) => {
-        if (typeof value === "bigint") return value.toString()
-        if (value instanceof Date) return value.toISOString()
-        return value
-      }
-    ))
-
-    return NextResponse.json(serializableSavedResource, { status: 201 })
+    return NextResponse.json(savedResource);
   } catch (error) {
     console.error("Error saving resource:", error)
     
@@ -127,7 +91,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const session = await auth()
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -140,50 +104,39 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    // Find the saved resource before deleting to potentially remove associated notification
-    const savedResource = await prisma.savedResource.findFirst({
-      where: {
-        userId: session.user.id,
-        resourceId: resourceId,
-      },
-      include: {
-        resource: {
-          select: {
-            userId: true,
-            title: true,
-          },
-        },
-      },
-    })
+    // Get the resource to check ownership
+    const resource = await prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { userId: true },
+    });
 
-    if (!savedResource) {
-      return NextResponse.json({ error: "Saved resource not found" }, { status: 404 })
+    if (!resource) {
+      return NextResponse.json({ error: "Resource not found" }, { status: 404 });
     }
 
-    // Delete the saved resource and decrement the saves counter
-    await prisma.$transaction([
-      prisma.savedResource.deleteMany({
-        where: {
+    // Delete saved resource
+    await prisma.savedResource.delete({
+      where: {
+        userId_resourceId: {
           userId: session.user.id,
           resourceId: resourceId,
         },
-      }),
-      prisma.resource.update({
-        where: { id: resourceId },
-        data: { saves: { decrement: 1 } }
-      }),
-      // Remove the save notification if it exists
-      prisma.notification.deleteMany({
+      },
+    });
+
+    // Delete notification if it exists
+    if (resource.userId !== session.user.id) {
+      await prisma.notification.deleteMany({
         where: {
           resourceId: resourceId,
-          userId: savedResource.resource.userId,
+          userId: resource.userId,
           actionUserId: session.user.id,
-          type: "SAVE",
+          type: 'RESOURCE_SAVE',
         },
-      }),
-    ])
+      });
+    }
 
-    return NextResponse.json({ message: "Resource unsaved" }, { status: 200 })
+    return NextResponse.json({ message: 'Resource unsaved' });
   } catch (error) {
     console.error("Error unsaving resource:", error)
     return NextResponse.json({ 

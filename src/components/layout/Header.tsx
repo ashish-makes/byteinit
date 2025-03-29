@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, X, Sparkles, User, LogOut, Settings, BookMarked } from "lucide-react";
+import { Menu, X, Sparkles, User, LogOut, Settings, BookMarked, Plus } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { AnimatedBackground } from "@/components/core/animated-background";
@@ -166,39 +166,42 @@ export default function Header() {
               </AnimatedBackground>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3">
+            {/* Actions - More compact */}
+            <div className="flex items-center gap-1">
               {status === "loading" ? (
                 <div className="h-8 w-8 animate-pulse rounded-full bg-primary/10" />
               ) : session ? (
-                <div className="hidden sm:block relative" ref={userDropdownRef}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleUserMenu}
-                    className="flex items-center gap-2 hover:bg-primary/10"
-                  >
-                    {session.user?.image ? (
-                      <Image
-                        src={session.user.image}
-                        alt="Profile"
-                        width={24}
-                        height={24}
-                        className="rounded-full"
-                      />
-                    ) : (
-                      <User className="w-5 h-5" />
+                <>
+                  {/* Profile Dropdown */}
+                  <div className="hidden sm:block relative" ref={userDropdownRef}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={toggleUserMenu}
+                      className="flex items-center gap-2 hover:bg-primary/10"
+                    >
+                      {session.user?.image ? (
+                        <Image
+                          src={session.user.image}
+                          alt="Profile"
+                          width={24}
+                          height={24}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <User className="w-5 h-5" />
+                      )}
+                      <span className="truncate max-w-[100px]">
+                        {session.user?.name?.split(" ")[0]}
+                      </span>
+                    </Button>
+                    {userMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-background border border-border/40">
+                        <UserMenu />
+                      </div>
                     )}
-                    <span className="truncate max-w-[100px]">
-                      {session.user?.name?.split(" ")[0]}
-                    </span>
-                  </Button>
-                  {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-background border border-border/40">
-                      <UserMenu />
-                    </div>
-                  )}
-                </div>
+                  </div>
+                </>
               ) : (
                 <div className="hidden sm:flex items-center gap-2">
                   <Link href="/auth/register">

@@ -202,9 +202,8 @@ export default function CompleteProfile() {
               <InfoIcon className="h-5 w-5 mr-3 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
               <div className="text-sm">
                 <p className="font-medium mb-1">Why we need your email</p>
-                <p>
-                  GitHub didn't provide your email due to privacy settings. Adding an email will help
-                  personalize your experience, enable account recovery, and allow you to receive important notifications.
+                <p className="text-sm text-muted-foreground">
+                  This information will help personalize your experience and enable account recovery.
                 </p>
               </div>
             </div>

@@ -3,17 +3,9 @@ import { prisma } from "@/prisma"
 import RightSidebar from "./RightSidebar"
 
 export async function TrendingSidebar() {
+  console.log('TrendingSidebar component rendering...')
   try {
-    // Get resources from the last 7 days
-    const lastWeek = new Date()
-    lastWeek.setDate(lastWeek.getDate() - 7)
-
     const trendingResources = await prisma.resource.findMany({
-      where: {
-        createdAt: {
-          gte: lastWeek
-        }
-      },
       select: {
         id: true,
         title: true,
@@ -32,6 +24,9 @@ export async function TrendingSidebar() {
       },
       orderBy: [
         {
+          uniqueViews: 'desc'
+        },
+        {
           interactions: {
             _count: 'desc'
           }
@@ -40,17 +35,16 @@ export async function TrendingSidebar() {
           savedResources: {
             _count: 'desc'
           }
-        },
-        {
-          uniqueViews: 'desc'
         }
       ],
-      take: 10
+      take: 5
     })
+
+    console.log('Fetched trending resources:', trendingResources)
 
     if (!trendingResources.length) {
       console.log('No trending resources found')
-      return null
+      return <RightSidebar trendingResources={[]} />
     }
 
     // Transform the data to match the expected format
@@ -63,11 +57,11 @@ export async function TrendingSidebar() {
       views: resource.uniqueViews
     }))
 
-    console.log(`Found ${resources.length} trending resources`)
+    console.log('Transformed resources:', resources)
     
     return <RightSidebar trendingResources={resources} />
   } catch (error) {
     console.error('Error fetching trending resources:', error)
-    return null
+    return <RightSidebar trendingResources={[]} />
   }
 } 

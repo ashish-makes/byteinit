@@ -61,6 +61,8 @@ import { getFollowStats } from "@/lib/actions/follow"
 import { CommentSection } from "@/components/blog/CommentSection"
 import React from "react"
 import { BlogStats } from "@/components/blog/BlogStats"
+import { BlogReactions } from "@/components/blog/BlogReactions"
+import { UserHoverCard } from "@/components/UserHoverCard"
 
 // Register languages
 hljs.registerLanguage("javascript", javascript)
@@ -1006,12 +1008,14 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 sm:block">
-                            <Link 
-                              href={`/u/${post.user?.username || "anonymous"}`}
-                              className="text-sm font-medium hover:underline inline-block"
-                            >
-                              {post.user?.name || "Anonymous"}
-                            </Link>
+                            <UserHoverCard username={post.user?.username || null}>
+                              <Link 
+                                href={`/u/${post.user?.username || "anonymous"}`}
+                                className="text-sm font-medium hover:underline inline-block"
+                              >
+                                {post.user?.name || "Anonymous"}
+                              </Link>
+                            </UserHoverCard>
                             
                             {/* Follow Button - Only visible on mobile */}
                             {session?.user && !isOwnProfile && post.user?.username && (
@@ -1052,6 +1056,8 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
                   <h1 itemProp="headline" className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
                     {post.title}
                   </h1>
+                  {/* Add BlogReactions component with picker button and counts */}
+                  <BlogReactions slug={post.slug} showPickerButton variant="regular" className="my-2" />
                   {post.summary && (
                     <p itemProp="description" className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                       {post.summary}
@@ -1097,7 +1103,7 @@ export default async function BlogPost({ params }: BlogPostPageProps) {
                 {/* This component handles the image zoom functionality */}
                 <ContentImageZoom />
                 
-                <div 
+                <div
                   className="prose prose-neutral dark:prose-invert max-w-none
                     prose-headings:font-semibold
                     prose-h1:text-xl

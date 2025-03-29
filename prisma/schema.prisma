@@ -55,6 +55,14 @@ enum VoteType {
   DOWN
 }
 
+enum NotificationType {
+  RESOURCE_LIKE
+  RESOURCE_SAVE
+  BLOG_VOTE
+  BLOG_SAVE
+  BLOG_COMMENT
+}
+
 model Resource {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   title         String
@@ -73,11 +81,11 @@ model Resource {
   interactions  ResourceInteraction[]
   
   savedResources SavedResource[] @relation("ResourceToSavedResource")
-  notifications Notification[]
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   reactions     ResourceReaction[]
+  notifications Notification[]
 }
 
 model SavedResource {
@@ -103,22 +111,6 @@ model ResourceInteraction {
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([resourceId, userId, type])
-}
- 
-model Notification {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String    @db.ObjectId
-  resourceId    String    @db.ObjectId
-  type          String    // e.g., "LIKE", "SAVE"
-  message       String
-  actionUserId  String?   @db.ObjectId  // User who performed the action
-  read          Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  user          User      @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
-  actionUser    User?     @relation("UserActions", fields: [actionUserId], references: [id], onDelete: Cascade)
-  resource      Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -153,8 +145,6 @@ model User {
   resources     Resource[]
   savedResources SavedResource[]
   interactions   ResourceInteraction[]
-  receivedNotifications Notification[] @relation("UserNotifications")
-  sentActions           Notification[] @relation("UserActions")
   reactions     ResourceReaction[]
   blogs         Blog[]
   blogLikes     BlogLike[]
@@ -163,6 +153,7 @@ model User {
   blogVotes     BlogVote[]
   commentReactions CommentReaction[]
   blogReactions BlogReaction[]
+  notifications Notification[]
 
   // Optional for WebAuthn support
   authenticators Authenticator[]
@@ -175,8 +166,10 @@ model User {
   following    User[]   @relation("UserFollows", fields: [followingIds], references: [id])
   followerIds  String[] @db.ObjectId @default([])
   followingIds String[] @db.ObjectId @default([])
+
+  notificationActions Notification[]  @relation("NotificationActionUser")
 }
- 
+
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
   userId            String  @db.ObjectId
@@ -269,10 +262,12 @@ model Blog {
   saves       BlogSave[]
   views       BlogView[]
   votes       BlogVote[]
-  reactions BlogReaction[]
+  reactions   BlogReaction[]
   
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  notifications Notification[]
 
   @@index([userId])
 }
@@ -292,7 +287,6 @@ model BlogReaction {
   @@index([userId])
 }
 
-
 model Comment {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
   content     String      @db.String
@@ -308,6 +302,8 @@ model Comment {
   
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  notifications Notification[]
 
   @@index([blogId])
   @@index([userId])
@@ -379,4 +375,35 @@ model SearchQuery {
 
   @@index([query])
   @@index([createdAt])
+}
+
+model Notification {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  type          NotificationType
+  read          Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  
+  // The user who will receive the notification
+  userId        String         @db.ObjectId
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // The user who performed the action
+  actionUserId  String         @db.ObjectId
+  actionUser    User           @relation("NotificationActionUser", fields: [actionUserId], references: [id], onDelete: Cascade)
+  
+  // Optional relations based on notification type
+  resourceId    String?        @db.ObjectId
+  resource      Resource?      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  
+  blogId        String?        @db.ObjectId
+  blog          Blog?          @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  commentId     String?        @db.ObjectId
+  comment       Comment?       @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([actionUserId])
+  @@index([resourceId])
+  @@index([blogId])
+  @@index([commentId])
 }

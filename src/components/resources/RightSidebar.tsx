@@ -102,6 +102,8 @@ const socialLinks = [
 ];
 
 const RightSidebar = ({ trendingResources = [] }: RightSidebarProps) => {
+  console.log('RightSidebar rendering with resources:', trendingResources);
+  
   return (
     <ScrollArea className="h-full">
       <div className="px-2 py-3 space-y-6">

@@ -157,18 +157,6 @@ const Sidebar = ({ className }: { className?: string }) => {
           </div>
 
           <Separator />
-
-          {/* Settings */}
-          <Link href="/dashboard/profile" passHref>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3"
-              size="sm"
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              <span>Settings</span>
-            </Button>
-          </Link>
         </div>
       </nav>
 

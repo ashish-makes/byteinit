@@ -25,16 +25,16 @@ export function ThemeToggle() {
       variant="ghost" 
       size="icon" 
       onClick={toggleTheme}
-      className="relative h-9 w-9 rounded-full bg-background hover:bg-primary/10 transition-colors duration-300"
+      className="relative h-7 w-7 rounded-full bg-background hover:bg-primary/10 transition-colors duration-300"
     >
       {/* Moon icon for light mode */}
       <Moon 
-        className={`h-[1.2rem] w-[1.2rem] absolute transition-all duration-300 
+        className={`h-3.5 w-3.5 absolute transition-all duration-300 
           ${resolvedTheme === "light" ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-0 rotate-90"} hover:text-primary`} 
       />
       {/* Sun icon for dark mode */}
       <Sun 
-        className={`h-[1.2rem] w-[1.2rem] absolute transition-all duration-300 
+        className={`h-3.5 w-3.5 absolute transition-all duration-300 
           ${resolvedTheme === "dark" ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-0 -rotate-90"} hover:text-primary`} 
       />
       <span className="sr-only">Toggle theme</span>
