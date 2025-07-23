@@ -163,7 +163,7 @@ export function ResourcesSidebar({
         <div className="flex items-center justify-between px-2 mb-4">
           <h2 className="font-semibold text-lg">Resources</h2>
           <Button variant="outline" size="sm" asChild>
-            <Link href="/resources/submit" className="flex items-center gap-1">
+            <Link href="/dashboard/resources/new" className="flex items-center gap-1">
               <Plus className="h-4 w-4" />
               <span>Submit</span>
             </Link>

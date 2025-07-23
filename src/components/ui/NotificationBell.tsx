@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface Notification {
   id: string;
@@ -184,28 +185,44 @@ export default function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9 rounded-full"
+          className="relative h-9 w-9 rounded-full hover:bg-muted/50 transition-colors duration-200"
         >
-          <Bell className="h-5 w-5" />
+          <Bell className="h-4.5 w-4.5 transition-colors duration-200" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center rounded-full"
+              className="absolute -top-0.5 -right-0.5 h-4 w-4 p-0 flex items-center justify-center rounded-full text-[10px] font-medium animate-in zoom-in-75 duration-200"
             >
               {unreadCount}
             </Badge>
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[320px] p-0 rounded-xl border-border/60 shadow-lg">
-        <div className="flex items-center justify-between p-3 border-b rounded-t-xl bg-muted/30">
-          <h3 className="text-base font-semibold">Notifications</h3>
+      <DropdownMenuContent 
+        align="end" 
+        className={cn(
+          "w-[380px] p-0 rounded-xl",
+          "border border-border/50",
+          "bg-background/95 backdrop-blur-sm",
+          "shadow-[0_10px_40px_-15px_rgba(0,0,0,0.05)] dark:shadow-[0_10px_40px_-15px_rgba(0,0,0,0.2)]",
+          "animate-in zoom-in-75 duration-200"
+        )}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-border/40">
+          <div className="flex flex-col">
+            <h3 className="text-sm font-medium">Notifications</h3>
+            {!loading && notifications.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {unreadCount} unread • {allCount} total
+              </p>
+            )}
+          </div>
           {notifications.length > 0 && (
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2 text-xs rounded-lg hover:bg-background/80"
+                className="h-8 px-2.5 text-xs rounded-lg hover:bg-muted/80 transition-colors duration-200"
                 onClick={() => {
                   const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
                   if (unreadIds.length > 0) {
@@ -220,32 +237,32 @@ export default function NotificationBell() {
                   }
                 }}
               >
-                <Check className="h-4 w-4 mr-1" />
+                <Check className="h-3.5 w-3.5 mr-1.5" />
                 Mark all read
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2 text-xs rounded-lg hover:bg-background/80"
+                className="h-8 px-2.5 text-xs rounded-lg hover:bg-muted/80 transition-colors duration-200"
                 onClick={clearNotifications}
               >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Clear
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Clear all
               </Button>
             </div>
           )}
         </div>
         
-        <ScrollArea className="max-h-[400px]">
+        <ScrollArea className="max-h-[420px] overflow-y-auto">
           {loading ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              Loading notifications...
+            <div className="py-8 text-center">
+              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-sm text-muted-foreground">Loading notifications...</p>
             </div>
           ) : notifications.length === 0 ? (
             <div className="py-12 px-4 text-center">
-              <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">No notifications yet</p>
+              <Bell className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+              <p className="text-sm font-medium text-muted-foreground">No notifications</p>
               <p className="text-xs text-muted-foreground/70 mt-1">
                 We'll notify you when something happens
               </p>
@@ -253,23 +270,27 @@ export default function NotificationBell() {
           ) : (
             <div className="py-1">
               {notifications.map((notification) => {
-                // Generate the message and link for the notification
                 const message = getNotificationMessage(notification);
                 const link = getNotificationLink(notification);
                 
                 return (
                   <div 
                     key={notification.id}
-                    className={`
-                      flex items-start gap-3 p-3 hover:bg-muted/50 cursor-pointer relative
-                      ${!notification.read ? 'bg-muted/30' : ''}
-                      border-b border-border/20 last:border-0
-                    `}
+                    className={cn(
+                      "group flex items-start gap-3 p-4 hover:bg-muted/50 relative",
+                      "transition-colors duration-200",
+                      !notification.read && "bg-muted/30",
+                      "border-b border-border/40 last:border-0"
+                    )}
                   >
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute top-1 right-1 h-6 w-6 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-muted/80"
+                      className={cn(
+                        "absolute top-2 right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100",
+                        "transition-all duration-200",
+                        "text-muted-foreground/40 hover:text-foreground hover:bg-muted/80"
+                      )}
                       onClick={(e) => {
                         e.stopPropagation();
                         markAsRead(notification.id);
@@ -279,7 +300,7 @@ export default function NotificationBell() {
                     </Button>
                     
                     <div 
-                      className="flex items-start gap-3 w-full pr-6" 
+                      className="flex items-start gap-3 w-full pr-8 cursor-pointer" 
                       onClick={() => {
                         if (!notification.read) {
                           markAsRead(notification.id);
@@ -291,19 +312,19 @@ export default function NotificationBell() {
                         <Image
                           src={notification.actionUser.image}
                           alt={notification.actionUser.name || 'User'}
-                          width={40}
-                          height={40}
+                          width={36}
+                          height={36}
                           className="rounded-full ring-2 ring-background"
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-background">
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-background">
                           <span className="text-sm font-medium">
                             {notification.actionUser.name?.[0] || 'U'}
                           </span>
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm">
+                        <p className="text-sm leading-relaxed">
                           <span className="font-medium">
                             {notification.actionUser.name}
                           </span>{' '}
@@ -318,35 +339,35 @@ export default function NotificationBell() {
                         {/* Display badge for notification type */}
                         <div className="mt-2 flex flex-wrap gap-1">
                           {notification.type.includes('RESOURCE') ? (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/50">
                               Resource
                             </Badge>
                           ) : notification.type.includes('BLOG') ? (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-full bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-800/50">
                               Blog
                             </Badge>
                           ) : null}
                           
                           {notification.type.includes('LIKE') && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-full bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-800/50">
                               Like
                             </Badge>
                           )}
                           
                           {notification.type.includes('SAVE') && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-full bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-200/50 dark:border-purple-800/50">
                               Save
                             </Badge>
                           )}
                           
                           {notification.type.includes('VOTE') && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-800/50">
                               Vote
                             </Badge>
                           )}
                           
                           {notification.type.includes('COMMENT') && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 rounded-full bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 border-teal-200/50 dark:border-teal-800/50">
                               Comment
                             </Badge>
                           )}
@@ -359,12 +380,6 @@ export default function NotificationBell() {
             </div>
           )}
         </ScrollArea>
-        
-        {!loading && notifications.length > 0 && (
-          <div className="p-2 border-t text-center text-xs text-muted-foreground bg-muted/20 rounded-b-xl">
-            {allCount} {allCount === 1 ? 'notification' : 'notifications'} total • {unreadCount} unread
-          </div>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

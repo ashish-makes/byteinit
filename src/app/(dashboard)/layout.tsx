@@ -33,7 +33,7 @@ export default function DashboardLayout({
   return (
     <>
       <TooltipProvider>
-        <div className="min-h-screen bg-muted/30">
+        <div className="min-h-screen bg-[#f9fafb] dark:bg-background">
           {/* Mobile Sidebar Overlay */}
           <div 
             className={cn(
@@ -55,16 +55,9 @@ export default function DashboardLayout({
           <div className="lg:pl-64 flex flex-col min-h-screen">
             <Header onMenuClick={() => setIsSidebarOpen(true)} />
             
-            {/* Breadcrumbs (Mobile) */}
-            <div className="lg:hidden px-4 md:px-6 pt-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <DynamicBreadcrumbs />
-            </div>
-
             {/* Main Content Area */}
-            <main className="flex-1 pb-8">
-              <div className="px-4 sm:px-6 lg:px-8 py-8">
-                {children}
-              </div>
+            <main className="flex-1">
+              {children}
             </main>
           </div>
         </div>

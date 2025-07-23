@@ -71,6 +71,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Toaster } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
+import { cn } from "@/lib/utils"
 
 // Import Recharts components for AreaChart
 import {
@@ -211,26 +212,57 @@ interface QuickActionProps {
   color: string
 }
 
-// Update the QuickAction component with minimal styling
+// Update the QuickAction component with softer shadows
 const QuickAction = ({ icon: Icon, label, description, href, color }: QuickActionProps) => (
   <Link 
     href={href}
-    className="group relative flex flex-col rounded-lg border bg-card/40 px-5 py-4 transition-all duration-200 hover:bg-card/60 hover:border-foreground/10 hover:-translate-y-0.5"
+    className={cn(
+      "group relative flex flex-col justify-between p-6 rounded-xl bg-white",
+      "hover:translate-y-[-2px] transition-all duration-300",
+      "after:absolute after:inset-0 after:rounded-xl",
+      "after:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]",
+      "dark:bg-card/40 dark:after:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]",
+      "dark:hover:bg-card/60"
+    )}
   >
-    <div className="flex items-start gap-3.5">
+    <div className="flex items-start justify-between mb-8">
       <div 
-        className="p-2.5 rounded-md w-fit shrink-0 transition-colors duration-200"
-        style={{ backgroundColor: `${color}15` }}
+        className="p-2.5 rounded-lg"
+        style={{ backgroundColor: `${color}08` }}
       >
         <Icon 
-          className="h-5 w-5 transition-transform duration-200 group-hover:scale-110" 
+          className="h-5 w-5" 
           style={{ color }} 
         />
       </div>
-      <div>
-        <h3 className="font-semibold text-sm text-foreground/90 tracking-tight mb-1.5 transition-colors duration-200 group-hover:text-foreground">{label}</h3>
-        <p className="text-[13px] text-muted-foreground/80 line-clamp-2 leading-normal">{description}</p>
+      <div 
+        className={cn(
+          "h-8 w-8 rounded-full flex items-center justify-center opacity-0 -translate-x-2",
+          "group-hover:opacity-100 group-hover:translate-x-0",
+          "transition-all duration-300 ease-out"
+        )}
+        style={{ backgroundColor: `${color}08`, color }}
+      >
+        <svg 
+          width="16" 
+          height="16" 
+          viewBox="0 0 16 16" 
+          fill="none" 
+          className="translate-x-[1px]"
+        >
+          <path 
+            d="M3.33337 8H12.6667M12.6667 8L8.00004 3.33333M12.6667 8L8.00004 12.6667" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
+    </div>
+    <div>
+      <h3 className="font-medium text-base text-foreground/90 mb-1">{label}</h3>
+      <p className="text-sm text-muted-foreground/80">{description}</p>
     </div>
   </Link>
 )
@@ -245,12 +277,16 @@ interface MetricCardProps {
   color: string
 }
 
-// Update the MetricCard component
+// Update the MetricCard component without border
 const MetricCard = ({ icon: Icon, label, value, trend, loading, color }: MetricCardProps) => (
-  <div className="relative rounded-lg border bg-card/40 p-4">
+  <div className={cn(
+    "relative rounded-xl bg-white p-5",
+    "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.03)]",
+    "dark:bg-card/40 dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]"
+  )}>
     <div className="flex gap-4">
       <div 
-        className="p-2.5 rounded-md h-fit"
+        className="p-2.5 rounded-lg h-fit"
         style={{ backgroundColor: `${color}10` }}
       >
         <Icon className="h-5 w-5" style={{ color }} />
@@ -261,9 +297,10 @@ const MetricCard = ({ icon: Icon, label, value, trend, loading, color }: MetricC
           <p className="text-sm font-medium text-foreground/80">{label}</p>
           {!loading && trend !== 0 && (
             <div 
-              className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full",
                 trend > 0 ? "text-emerald-500 bg-emerald-500/10" : "text-red-500 bg-red-500/10"
-              }`}
+              )}
             >
               {trend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
               <span>{Math.abs(trend)}%</span>
@@ -274,7 +311,7 @@ const MetricCard = ({ icon: Icon, label, value, trend, loading, color }: MetricC
         {loading ? (
           <Skeleton className="h-8 w-24" />
         ) : (
-          <span className="text-2xl font-semibold text-foreground">
+          <span className="text-2xl font-semibold tracking-tight text-foreground">
             {value.toLocaleString()}
           </span>
         )}
@@ -852,52 +889,20 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-8"
+        className="space-y-8 pb-8 bg-[#f9fafb] dark:bg-background min-h-screen px-4 sm:px-6 -mt-14 pt-14"
       >
         {/* Header Section */}
-        <div className="flex flex-col gap-8">
-          {/* Welcome and Profile Section */}
+        <div className="flex flex-col gap-6 pt-6">
+          {/* Welcome Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground/90">
-                Welcome back, {session?.user?.name || "User"}
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                Welcome back, {session?.user?.name?.split(' ')[0] || "User"}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Here&apos;s what&apos;s happening with your content
               </p>
             </div>
-          </div>
-
-          {/* Update the Quick Actions Panel */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <QuickAction
-              icon={Plus}
-              label="New Resource"
-              description="Share a helpful resource or tutorial"
-              href="/dashboard/resources/new"
-              color="#3b82f6"
-            />
-            <QuickAction
-              icon={FileText}
-              label="Write Blog"
-              description="Create an engaging blog post"
-              href="/dashboard/blog/new"
-              color="#8b5cf6"
-            />
-            <QuickAction
-              icon={BookMarked}
-              label="Saved Items"
-              description="Access your saved resources"
-              href="/dashboard/saved"
-              color="#10b981"
-            />
-            <QuickAction
-              icon={Settings}
-              label="Settings"
-              description="Customize your preferences"
-              href="/dashboard/settings"
-              color="#f59e0b"
-            />
           </div>
 
           {/* Profile Link Card - Only show if not dismissed */}
@@ -907,7 +912,11 @@ export default function Dashboard() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-lg border bg-card/50 backdrop-blur-sm"
+                className={cn(
+                  "relative flex flex-col sm:flex-row items-start sm:items-center gap-3 p-5 rounded-xl",
+                  "border bg-card/40 backdrop-blur-sm",
+                  "transition-all duration-200"
+                )}
               >
                 {/* Close button - Mobile only */}
                 <Button
@@ -919,28 +928,28 @@ export default function Dashboard() {
                   <X className="h-3 w-3" />
                 </Button>
 
-                <div className="flex items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
-                  <div className="p-2 rounded-md bg-primary/10 shrink-0">
-                    <Link2 className="h-4 w-4 text-primary" />
+                <div className="flex items-center gap-4 flex-1 min-w-0 pr-8 sm:pr-0">
+                  <div className="p-2.5 rounded-lg bg-primary/10 shrink-0">
+                    <Link2 className="h-5 w-5 text-primary" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-medium text-sm text-foreground/90 flex items-center gap-2">
+                    <h3 className="font-medium text-base text-foreground/90">
                       Your Profile is Ready! 
-                      <span className="hidden xs:inline">🎉</span>
+                      <span className="hidden xs:inline ml-2">🎉</span>
                     </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <code className="px-2 py-0.5 text-xs rounded bg-muted truncate">
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <code className="px-2 py-0.5 text-sm rounded bg-muted truncate">
                         {getDisplayUrl(session?.user)}
                       </code>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex gap-1 sm:gap-2">
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 w-8 sm:w-auto sm:px-3 relative"
+                    className="h-8 px-3 relative"
                     onClick={() => {
                       navigator.clipboard.writeText(getDisplayUrl(session?.user));
                       setCopySuccess(true);
@@ -953,24 +962,24 @@ export default function Dashboard() {
                         animate={{ scale: 1 }}
                         exit={{ scale: 0 }}
                       >
-                        <Check className="h-3 w-3" />
+                        <Check className="h-3.5 w-3.5" />
                       </motion.div>
                     ) : (
-                      <Copy className="h-3 w-3" />
+                      <Copy className="h-3.5 w-3.5" />
                     )}
-                    <span className="hidden sm:inline-block sm:ml-1 text-xs">
+                    <span className="ml-2 text-sm">
                       {copySuccess ? 'Copied!' : 'Copy'}
                     </span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 w-8 sm:w-auto sm:px-3"
+                    className="h-8 px-3"
                     asChild
                   >
                     <Link href={getNavigationUrl(session?.user)}>
-                      <ExternalLink className="h-3 w-3" />
-                      <span className="hidden sm:inline-block sm:ml-1 text-xs">View</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span className="ml-2 text-sm">View</span>
                     </Link>
                   </Button>
                   {/* Close button - Desktop only */}
@@ -980,21 +989,53 @@ export default function Dashboard() {
                     onClick={dismissProfileLink}
                     className="hidden sm:flex h-8 w-8 rounded-full shrink-0"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Quick Actions Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <QuickAction
+              icon={Plus}
+              label="New Resource"
+              description="Share helpful resources and tutorials with the community"
+              href="/dashboard/resources/new"
+              color="#3b82f6"
+            />
+            <QuickAction
+              icon={FileText}
+              label="Write Blog"
+              description="Create engaging blog posts to share your knowledge"
+              href="/dashboard/blog/new"
+              color="#8b5cf6"
+            />
+            <QuickAction
+              icon={BookMarked}
+              label="Saved Items"
+              description="Access your collection of saved resources and articles"
+              href="/dashboard/saved"
+              color="#10b981"
+            />
+            <QuickAction
+              icon={Settings}
+              label="Settings"
+              description="Manage your account preferences and profile settings"
+              href="/dashboard/settings"
+              color="#f59e0b"
+            />
+          </div>
         </div>
 
         {/* Key Metrics Section */}
         <div className="space-y-6">
           <div className="w-full">
             <div className="flex flex-col gap-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
+                  <div className="p-2.5 rounded-lg bg-primary/10">
                     <Activity className="h-5 w-5 text-primary" />
                   </div>
                   <div>
@@ -1002,31 +1043,36 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground">Track your content performance</p>
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 rounded-md">
-                      {contentType === 'resources' ? (
-                        <FolderOpenDot className="h-4 w-4 mr-2" />
-                      ) : (
-                        <FileText className="h-4 w-4 mr-2" />
-                      )}
-                      {contentType === 'resources' ? 'Resources' : 'Blog Posts'}
-                      <ChevronDown className="h-4 w-4 ml-2" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setContentType('resources')}>
-                      <FolderOpenDot className="h-4 w-4 mr-2" />
-                      Resources
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setContentType('blog')}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Blog Posts
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+
+                <div className="flex items-center bg-white dark:bg-card/40 rounded-full p-1 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.03)] dark:shadow-[0_2px_8px_-3px_rgba(0,0,0,0.06)]">
+                  <button
+                    onClick={() => setContentType('resources')}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors flex-1 justify-center sm:flex-initial sm:justify-start",
+                      contentType === 'resources' 
+                        ? "bg-primary text-primary-foreground font-medium" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <FolderOpenDot className="h-4 w-4" />
+                    Resources
+                  </button>
+                  <button
+                    onClick={() => setContentType('blog')}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors flex-1 justify-center sm:flex-initial sm:justify-start",
+                      contentType === 'blog' 
+                        ? "bg-primary text-primary-foreground font-medium" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Blog Posts
+                  </button>
+                </div>
               </div>
 
+              {/* Metrics Grid */}
               {contentType === 'resources' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <MetricCard
@@ -1106,7 +1152,7 @@ export default function Dashboard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2.5 rounded-lg bg-primary/10">
                 <FileText className="h-5 w-5 text-primary" />
               </div>
               <div>
@@ -1116,25 +1162,25 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="rounded-lg border">
+          <div className="rounded-xl bg-white dark:bg-card/40">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-border/50 hover:bg-transparent">
-                  <TableHead className="w-[400px] py-2 text-xs uppercase tracking-wider text-foreground/70">Content</TableHead>
-                  <TableHead className="py-2 text-xs uppercase tracking-wider text-foreground/70">Status</TableHead>
-                  <TableHead className="text-center py-2 text-xs uppercase tracking-wider text-foreground/70">Views/Likes</TableHead>
-                  <TableHead className="text-center py-2 text-xs uppercase tracking-wider text-foreground/70">Saves</TableHead>
-                  <TableHead className="text-center py-2 text-xs uppercase tracking-wider text-foreground/70">Comments</TableHead>
-                  <TableHead className="text-center py-2 text-xs uppercase tracking-wider text-foreground/70">Votes</TableHead>
-                  <TableHead className="py-2 text-xs uppercase tracking-wider text-foreground/70">Uploaded</TableHead>
-                  <TableHead className="text-right py-2 text-xs uppercase tracking-wider text-foreground/70">Actions</TableHead>
+                <TableRow className="hover:bg-transparent border-0">
+                  <TableHead className="w-[400px] py-3 text-xs uppercase tracking-wider text-foreground/70">Content</TableHead>
+                  <TableHead className="py-3 text-xs uppercase tracking-wider text-foreground/70">Status</TableHead>
+                  <TableHead className="text-center py-3 text-xs uppercase tracking-wider text-foreground/70">Views/Likes</TableHead>
+                  <TableHead className="text-center py-3 text-xs uppercase tracking-wider text-foreground/70">Saves</TableHead>
+                  <TableHead className="text-center py-3 text-xs uppercase tracking-wider text-foreground/70">Comments</TableHead>
+                  <TableHead className="text-center py-3 text-xs uppercase tracking-wider text-foreground/70">Votes</TableHead>
+                  <TableHead className="py-3 text-xs uppercase tracking-wider text-foreground/70">Uploaded</TableHead>
+                  <TableHead className="text-right py-3 text-xs uppercase tracking-wider text-foreground/70">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   // Skeleton loading rows
                   Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index} className="border-b border-border/50">
+                    <TableRow key={index} className="border-0">
                       <TableCell className="py-3">
                         <div className="flex items-start gap-2.5">
                           <Skeleton className="h-8 w-8 rounded-lg" />
@@ -1181,7 +1227,7 @@ export default function Dashboard() {
                     .map((item) => (
                       <TableRow 
                         key={item.id}
-                        className="border-b border-border/50 hover:bg-muted/50 transition-colors"
+                        className="border-0 hover:bg-muted/40 transition-colors"
                       >
                         <TableCell className="py-3">
                           <div className="flex items-start gap-2.5">
@@ -1391,7 +1437,7 @@ export default function Dashboard() {
 
             {/* Pagination */}
             {!loading && (
-              <div className="flex items-center justify-between px-4 py-4 border-t">
+              <div className="flex items-center justify-between px-4 py-4">
                 <p className="text-sm text-muted-foreground">
                   Showing {Math.min((page - 1) * itemsPerPage + 1, contentItems.length)} to{' '}
                   {Math.min(page * itemsPerPage, contentItems.length)} of {contentItems.length} entries

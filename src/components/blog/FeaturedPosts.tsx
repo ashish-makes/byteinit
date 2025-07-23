@@ -163,9 +163,8 @@ function FeaturedCard({ post }: { post: FeaturedPost }) {
   }
 
   return (
-    <Card className="group hover:bg-accent/50 transition-colors relative overflow-hidden h-full border-[0.5px] border-border/40 hover:border-border/80">
-      {/* Subtle gradient overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none" />
+    <Card className="group bg-white dark:bg-neutral-900 hover:bg-accent/10 transition-colors duration-200 relative overflow-hidden h-full border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-none">
+      {/* Remove the gradient overlay since we're using solid background now */}
       
       <motion.div 
         whileHover={{ scale: 1.01 }}

@@ -1,13 +1,20 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Github, Twitter, Code2, Share2, Send } from 'lucide-react';
+import { Github, Twitter, Share2, Send } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { useTheme } from "next-themes";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { resolvedTheme } = useTheme();
+  
+  const logoSrc = resolvedTheme === 'dark' ? '/logo-dark.svg' : '/logo-light.svg';
   
   return (
     <footer className="mt-auto">
@@ -17,10 +24,10 @@ export function Footer() {
           <div className="px-8 py-12 bg-neutral-50 dark:bg-neutral-900 rounded-t-3xl">
             <div className="max-w-xl mx-auto text-center">
               <h3 className="text-2xl font-bold mb-3">
-                Stay in the loop
+                Stay up to date
               </h3>
               <p className="text-muted-foreground mb-6">
-                Subscribe to our newsletter for the latest developer resources, tools, and updates.
+                Subscribe to our newsletter for the latest resources, developer tools, and community updates.
               </p>
               <div className="flex gap-2 max-w-md mx-auto">
                 <Input 
@@ -42,50 +49,59 @@ export function Footer() {
               <div className="lg:col-span-2">
                 <Link 
                   href="/" 
-                  className="inline-flex items-center space-x-2 bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors"
+                  className="inline-flex items-center space-x-2 px-1 transition-colors"
                 >
-                  <Code2 className="h-6 w-6 text-primary" />
-                  <span className="text-xl font-bold">Byteinit</span>
+                  <Image 
+                    src={logoSrc} 
+                    alt="Byteinit Logo" 
+                    width={28} 
+                    height={28}
+                    className="transition-opacity"
+                  />
                 </Link>
                 <p className="mt-6 text-muted-foreground leading-relaxed">
-                  Your go-to platform for finding and sharing development tools, libraries, and resources. Join a community of developers building the future together.
+                  Your comprehensive platform for discovering and sharing developer resources, tools, and libraries. Join our community of builders creating the future.
                 </p>
                 <div className="mt-6 flex items-center space-x-3">
-                  <Button variant="outline" size="icon" className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
-                    <Github className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
-                    <Twitter className="h-4 w-4" />
-                  </Button>
+                  <Link href="https://github.com/byteinit" target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="icon" className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
+                      <Github className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="https://twitter.com/byteinit" target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="icon" className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
+                      <Twitter className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
 
               {/* Quick Links */}
               {[
                 {
-                  title: "Platform",
+                  title: "Resources",
                   links: [
-                    { label: "Features", badge: "New" },
-                    "Resource Directory",
-                    "Integration Hub",
-                    "Developer API",
+                    { label: "All Resources", badge: "Popular" },
+                    "Frontend",
+                    "Backend",
+                    "Dev Tools",
                   ]
                 },
                 {
                   title: "Community",
                   links: [
-                    "Documentation",
-                    "Discussion Forums",
-                    "Contributing Guide",
-                    "Resource Submissions",
+                    "Blog",
+                    "Tutorials",
+                    "Contribute",
+                    "Submit Resources",
                   ]
                 },
                 {
-                  title: "Company",
+                  title: "About",
                   links: [
-                    "About Us",
-                    "Blog",
-                    { label: "Careers", badge: "Hiring" },
+                    "Our Mission",
+                    "Team",
+                    { label: "Join Us", badge: "Hiring" },
                     "Contact",
                   ]
                 },
@@ -95,7 +111,7 @@ export function Footer() {
                     "Privacy Policy",
                     "Terms of Service",
                     "Code of Conduct",
-                    "Cookie Settings",
+                    "Cookie Policy",
                   ]
                 }
               ].map((section, index) => (
@@ -139,11 +155,11 @@ export function Footer() {
                   className="text-xs rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
-                  Share DevHub
+                  Share Byteinit
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground bg-muted px-4 py-2 rounded-full">
-                © {currentYear} DevHub. All rights reserved.
+                © {currentYear} Byteinit. All rights reserved.
               </p>
             </div>
           </div>

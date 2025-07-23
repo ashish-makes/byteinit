@@ -32,7 +32,9 @@ import {
   Linkedin,
   Mail,
   ExternalLink,
-  Lock
+  Lock,
+  AlertCircle,
+  XCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -40,6 +42,8 @@ import { useTheme } from 'next-themes';
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import Marquee from "@/components/magicui/marquee";
+// Import new components
+import { ComparisonRow, PartnerCard, IntegrationCategory } from './components';
 
 // Register GSAP plugins
 if (typeof window !== 'undefined') {
@@ -446,7 +450,7 @@ const StatsSelector = () => {
   }, []);
   
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 md:space-y-2.5">
       {platformStats.map((stat, index) => (
         <motion.div
           key={index}
@@ -454,22 +458,22 @@ const StatsSelector = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: index * 0.1 }}
           className={cn(
-            "card-with-border-effect p-3 rounded-lg cursor-pointer transition-all duration-300",
+            "card-with-border-effect p-2 sm:p-2.5 md:p-3 rounded-lg cursor-pointer transition-all duration-300",
             "border border-border/30 hover:border-border/60",
-            "flex items-start space-x-3 hover:scale-[1.01]",
+            "flex items-start space-x-2 sm:space-x-3 hover:scale-[1.01]",
             activeStatIndex === index 
               ? "bg-primary/5 border-primary/20" 
               : "hover:bg-card/80"
           )}
           onClick={() => setActiveStatIndex(index)}
         >
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-0.5">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-0.5">
             {stat.icon}
           </div>
           
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-baseline justify-between mb-0.5">
-              <h3 className="text-xl font-bold tracking-tight text-foreground">
+              <h3 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-foreground truncate">
                 {stat.animatedValue ? (
                   <>{activeStatIndex === index ? (
                     <CountUp end={stat.animatedValue} duration={1500} />
@@ -482,28 +486,28 @@ const StatsSelector = () => {
               
               {/* Trend indicator */}
               <div className={cn(
-                "text-xs px-1.5 py-0.5 rounded-full flex items-center",
+                "text-[10px] md:text-xs px-1 sm:px-1.5 py-0.5 rounded-full flex items-center ml-1",
                 trendData[index].isPositive 
                   ? "text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" 
                   : "text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/10"
               )}>
                 {trendData[index].isPositive ? (
-                  <TrendingUp className="h-3 w-3 mr-0.5" />
+                  <TrendingUp className="h-2.5 w-2.5 md:h-3 md:w-3 mr-0.5" />
                 ) : (
-                  <ArrowUpRight className="h-3 w-3 mr-0.5 rotate-180" />
+                  <ArrowUpRight className="h-2.5 w-2.5 md:h-3 md:w-3 mr-0.5 rotate-180" />
                 )}
                 {trendData[index].value}%
               </div>
             </div>
             
-            <p className="text-sm font-medium text-foreground mb-0.5 flex items-center">
+            <p className="text-xs sm:text-sm font-medium text-foreground mb-0.5 flex items-center truncate">
               {stat.label}
               <span className="ml-1.5 p-0.5 rounded-full bg-muted/50 hover:bg-muted cursor-help" title={`${stat.description} - Updated daily from platform analytics.`}>
-                <Eye className="h-2.5 w-2.5 text-muted-foreground" />
+                <Eye className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-muted-foreground" />
               </span>
             </p>
             
-            <p className="text-xs text-muted-foreground line-clamp-2">
+            <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">
               {stat.description}
             </p>
           </div>
@@ -610,17 +614,17 @@ const BrowserToolbar = () => {
   const formattedLabel = currentStat.label.toLowerCase().replace(/\s+/g, '-');
   
   return (
-    <div className="px-4 py-2 border-b border-border/30 bg-muted/30 flex items-center justify-between">
-      <div className="flex space-x-1.5">
-        <div className="w-3 h-3 rounded-full bg-red-400"></div>
-        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-        <div className="w-3 h-3 rounded-full bg-green-400"></div>
+    <div className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 border-b border-border/30 bg-muted/30 flex items-center justify-between">
+      <div className="flex space-x-1 sm:space-x-1.5">
+        <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-400"></div>
+        <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-amber-400"></div>
+        <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-400"></div>
       </div>
       
       {/* URL bar - simplified */}
-      <div className="flex-1 mx-4 px-3 py-1 rounded-md text-xs bg-background/60 backdrop-blur-sm text-muted-foreground truncate font-mono flex items-center">
-        <div className="w-4 h-4 mr-2 text-muted-foreground/50">
-          <Lock className="w-3 h-3" />
+      <div className="flex-1 mx-2 sm:mx-3 md:mx-4 px-2 sm:px-3 py-1 rounded-md text-[10px] sm:text-xs bg-background/60 backdrop-blur-sm text-muted-foreground truncate font-mono flex items-center">
+        <div className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-muted-foreground/50">
+          <Lock className="w-2 h-2 sm:w-3 sm:h-3" />
         </div>
         byteinit.dev/metrics/{formattedLabel}
       </div>
@@ -1488,33 +1492,222 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Platform Statistics Section - Video Interactive Version */}
-      <section className="py-12 md:py-16 relative bg-background border-t border-border/20">
-        {/* Background grid pattern with corner fading effect */}
-        <div className="absolute inset-0 overflow-hidden">
-          {/* Base grid pattern */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-          
-          {/* Corner overlays for fade effect */}
-          <div className="absolute inset-0" style={{
-            background: "radial-gradient(circle at center, transparent 30%, var(--background) 100%)",
-            mixBlendMode: "multiply"
-          }}></div>
-          
-          <div className="absolute top-0 left-0 w-[40%] h-[40%] bg-gradient-to-br from-background to-transparent"></div>
-          <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-gradient-to-bl from-background to-transparent"></div>
-          <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-gradient-to-tr from-background to-transparent"></div>
-          <div className="absolute bottom-0 right-0 w-[40%] h-[40%] bg-gradient-to-tl from-background to-transparent"></div>
-        </div>
-        
-        <div className="container max-w-6xl mx-auto px-4 relative">
-          <div className="flex flex-col items-center mb-10">
-            <Badge className="mb-3 text-xs rounded-full px-3 py-1 bg-background border-zinc-200 dark:border-zinc-800" variant="outline">Platform Metrics</Badge>
+      {/* Platform Comparison Section - Completely Redesigned as Terminal/Code Editor */}
+      <section className="py-24 bg-zinc-950 dark:bg-zinc-950 bg-white/90 border-t border-border/10">
+        <div className="container max-w-6xl mx-auto px-4">
+          <div className="flex flex-col items-center mb-12">
+            <Badge className="mb-2 text-xs rounded-full px-3 py-1 bg-muted border-border" variant="outline">Comparison</Badge>
             <motion.h2 
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               transition={{ duration: 0.7 }}
-              className="text-3xl md:text-4xl font-bold text-center max-w-xl"
+              className="text-3xl font-bold text-center text-foreground"
+            >
+              Platform Comparison
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-muted-foreground text-center mt-3 max-w-xl"
+            >
+              How ByteInit compares to traditional content platforms
+            </motion.p>
+            </div>
+            
+          {/* Terminal UI */}
+          <div className="rounded-lg overflow-hidden border border-border max-w-4xl mx-auto">
+            {/* Terminal Header */}
+            <div className="bg-muted/80 dark:bg-zinc-900 px-4 py-2 flex items-center justify-between border-b border-border">
+              <div className="flex space-x-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              </div>
+              <div className="font-mono text-xs text-muted-foreground">
+                compare.sh
+              </div>
+              <div className="font-mono text-xs text-muted-foreground/60">
+                byteinit
+              </div>
+            </div>
+            
+            {/* Terminal Content */}
+            <div className="bg-card dark:bg-zinc-950 text-card-foreground dark:text-zinc-300 p-4 font-mono text-sm leading-relaxed overflow-x-auto">
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="space-y-4"
+              >
+                {/* Command and output simulation */}
+                <div className="flex items-start">
+                  <span className="text-emerald-600 dark:text-emerald-500 mr-2">$</span>
+                  <motion.span
+                    initial={{ width: 0, opacity: 0 }}
+                    whileInView={{ width: "100%", opacity: 1 }}
+                    transition={{ duration: 1 }}
+                    className="overflow-hidden whitespace-nowrap text-emerald-600 dark:text-emerald-300"
+                  >
+                    ./compare.sh --core-features
+                  </motion.span>
+                  </div>
+                
+                <div className="pt-2 pb-1">
+                  <div className="text-purple-600 dark:text-purple-400">
+                    # Core Features Comparison
+                </div>
+              </div>
+              
+                {/* Simplified Terminal Table Output */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse font-mono text-xs sm:text-sm">
+                    <thead>
+                      <tr>
+                        <th className="py-2 px-3 text-left border-b border-border text-purple-600 dark:text-purple-400 font-medium">FEATURE</th>
+                        <th className="py-2 px-3 text-left border-b border-border text-blue-600 dark:text-blue-400 font-medium">BYTEINIT</th>
+                        <th className="py-2 px-3 text-left border-b border-border text-muted-foreground font-medium">OTHERS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Content Presentation Row */}
+                      <motion.tr
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.2 }}
+                      >
+                        <td className="py-3 px-3 align-top border-b border-border/50">
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold">Content<br/>Presentation</span>
+                        </td>
+                        <td className="py-3 px-3 align-top border-b border-border/50">
+                          <div className="flex items-center">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-500 mr-2 flex-shrink-0" />
+                            <span className="text-emerald-600 dark:text-emerald-300 font-medium">Modern & Clean</span>
+                          </div>
+                          <ul className="mt-1 space-y-1 text-foreground dark:text-zinc-300 pl-6">
+                            <li>• Sleek developer-focused design</li>
+                            <li>• Enhanced content formatting</li>
+                          </ul>
+                        </td>
+                        <td className="py-3 px-3 align-top border-b border-border/50">
+                          <div className="flex items-center">
+                            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mr-2 flex-shrink-0" />
+                            <span className="text-amber-600 dark:text-amber-300 font-medium">Standard Layout</span>
+                          </div>
+                          <ul className="mt-1 space-y-1 text-muted-foreground pl-6">
+                            <li>• Generic content templates</li>
+                            <li>• Basic formatting options</li>
+                          </ul>
+                        </td>
+                      </motion.tr>
+                      
+                      {/* Developer Focus Row */}
+                      <motion.tr
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.3 }}
+                      >
+                        <td className="py-3 px-3 align-top border-b border-border/50">
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold">Developer<br/>Focus</span>
+                        </td>
+                        <td className="py-3 px-3 align-top border-b border-border/50">
+                          <div className="flex items-center">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-500 mr-2 flex-shrink-0" />
+                            <span className="text-emerald-600 dark:text-emerald-300 font-medium">Built for Developers</span>
+                          </div>
+                          <ul className="mt-1 space-y-1 text-foreground dark:text-zinc-300 pl-6">
+                            <li>• Developer-centered UX</li>
+                            <li>• Technical content optimized</li>
+                          </ul>
+                        </td>
+                        <td className="py-3 px-3 align-top border-b border-border/50">
+                          <div className="flex items-center">
+                            <XCircle className="h-4 w-4 text-muted-foreground dark:text-zinc-500 mr-2 flex-shrink-0" />
+                            <span className="text-red-600 dark:text-red-400 font-medium">General Audience</span>
+                          </div>
+                          <ul className="mt-1 space-y-1 text-muted-foreground pl-6">
+                            <li>• General purpose design</li>
+                            <li>• Not optimized for code</li>
+                          </ul>
+                        </td>
+                      </motion.tr>
+                      
+                      {/* Future Plans Row */}
+                      <motion.tr
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.4 }}
+                      >
+                        <td className="py-3 px-3 align-top">
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold">Roadmap<br/>Features</span>
+                        </td>
+                        <td className="py-3 px-3 align-top">
+                          <div className="flex items-center">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-500 mr-2 flex-shrink-0" />
+                            <span className="text-emerald-600 dark:text-emerald-300 font-medium">Ambitious Plans</span>
+                          </div>
+                          <ul className="mt-1 space-y-1 text-foreground dark:text-zinc-300 pl-6">
+                            <li>• Code execution (coming soon)</li>
+                            <li>• Developer portfolios</li>
+                            <li className="italic opacity-70">And many more...</li>
+                          </ul>
+                        </td>
+                        <td className="py-3 px-3 align-top">
+                          <div className="flex items-center">
+                            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mr-2 flex-shrink-0" />
+                            <span className="text-amber-600 dark:text-amber-300 font-medium">Limited Scope</span>
+                          </div>
+                          <ul className="mt-1 space-y-1 text-muted-foreground pl-6">
+                            <li>• General feature improvements</li>
+                            <li>• Non-technical focus</li>
+                          </ul>
+                        </td>
+                      </motion.tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Final command */}
+                <div className="pt-4 border-t border-border mt-2">
+                  <div className="flex items-start">
+                    <span className="text-emerald-600 dark:text-emerald-500 mr-2">$</span>
+                    <span className="text-emerald-600 dark:text-emerald-300 animate-pulse">_</span>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+          
+          {/* Terminal Legend */}
+          <div className="mt-6 flex flex-wrap justify-center items-center gap-6 text-sm text-muted-foreground max-w-2xl mx-auto">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+              <span>Better choice for developers</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              <span>Limited features</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-muted-foreground dark:text-zinc-500" />
+              <span>Missing features</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Statistics Section - Video Interactive Version */}
+      <section className="py-12 md:py-16 relative bg-background border-t border-border/20">
+        {/* Remove grid background */}
+        
+        <div className="container max-w-6xl mx-auto px-4 relative">
+          <div className="flex flex-col items-center mb-8 md:mb-10">
+            <Badge className="mb-2 md:mb-3 text-xs rounded-full px-3 py-1 bg-background border-zinc-200 dark:border-zinc-800" variant="outline">Platform Metrics</Badge>
+            <motion.h2 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.7 }}
+              className="text-2xl md:text-3xl lg:text-4xl font-bold text-center max-w-xl"
             >
               ByteInit by the numbers
             </motion.h2>
@@ -1522,7 +1715,7 @@ const AboutPage = () => {
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-muted-foreground text-center mt-3 max-w-lg font-mono text-sm"
+              className="text-muted-foreground text-center mt-2 md:mt-3 max-w-lg font-mono text-xs md:text-sm"
             >
               /* Live data from our developer community */
             </motion.p>
@@ -1530,74 +1723,11 @@ const AboutPage = () => {
             
           {/* Stats with video player layout */}
           <StatsProvider value={{ activeStatIndex, setActiveStatIndex }}>
-            <div className="grid lg:grid-cols-5 gap-6">
-              {/* Stats selector column - takes 2/5 of width on desktop */}
-              <div className="lg:col-span-2 order-2 lg:order-1">
-                <div className="relative">
-                  {/* Code-inspired decoration */}
-                  <div className="absolute -left-4 top-0 bottom-0 border-l-2 border-dashed border-border/30 hidden lg:block"></div>
-                  <div className="mb-6">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <div className="h-4 w-4 rounded-full bg-primary/10 flex items-center justify-center">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
-                      </div>
-                      <div className="font-mono text-xs text-muted-foreground">
-                        SELECT * FROM metrics WHERE platform = 'ByteInit'
-                      </div>
-                    </div>
-                    <div className="font-mono text-xs text-muted-foreground ml-6">
-                      <span className="opacity-50">// Click to visualize each metric</span>
-                    </div>
-                  </div>
-                  
-                  {/* Progress indicator */}
-                  <div className="flex items-center justify-between mb-6 px-1">
-                    <div className="text-xs text-muted-foreground font-mono">
-                      metrics[<span className="text-primary">{activeStatIndex + 1}</span>/{platformStats.length}]
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      {platformStats.map((_, index) => (
-                        <div 
-                          key={index} 
-                          className={cn(
-                            "w-2 h-2 rounded-full transition-all duration-300",
-                            activeStatIndex === index 
-                              ? "bg-primary" 
-                              : "bg-border hover:bg-primary/50 cursor-pointer"
-                          )}
-                          onClick={() => setActiveStatIndex(index)}
-                        ></div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <StatsSelector />
-                  
-                  <div className="mt-8 ml-6 hidden lg:block">
-                    <div className="rounded-md border border-border/50 p-4 bg-zinc-50/80 dark:bg-zinc-900/50 backdrop-blur-sm">
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-semibold block mb-1">Data source:</span>
-                        All metrics are collected from real platform usage. Updated daily to reflect current growth and user engagement.
-                      </p>
-                      <div className="mt-3 flex justify-between items-center text-xs">
-                        <div className="flex items-center space-x-2">
-                          <div className="relative h-2 w-2">
-                            <div className="absolute animate-ping h-full w-full rounded-full bg-emerald-400 opacity-75"></div>
-                            <div className="relative rounded-full h-2 w-2 bg-emerald-500"></div>
-                          </div>
-                          <span>Live data</span>
-                        </div>
-                        <span>Last updated: {new Date().toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Video display column - takes 3/5 of width on desktop */}
-              <div className="lg:col-span-3 order-1 lg:order-2">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              {/* Video display column - takes full width on mobile, 3/5 on desktop */}
+              <div className="lg:col-span-3 order-1">
                 {/* Browser-like frame for the video */}
-                <div className="rounded-lg overflow-hidden border border-border/40 flex flex-col bg-card/90 backdrop-blur-sm w-full h-[350px] md:h-[450px] lg:h-[550px]">
+                <div className="rounded-lg overflow-hidden border border-border/40 flex flex-col bg-card/90 backdrop-blur-sm w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px]">
                   {/* Browser toolbar */}
                   <BrowserToolbar />
                   
@@ -1607,12 +1737,12 @@ const AboutPage = () => {
                   </div>
                   
                   {/* Browser status bar */}
-                  <div className="border-t border-border/30 px-4 py-1.5 bg-muted/30 flex justify-end items-center text-xs text-muted-foreground">
+                  <div className="border-t border-border/30 px-3 md:px-4 py-1 md:py-1.5 bg-muted/30 flex justify-end items-center text-[10px] md:text-xs text-muted-foreground">
                     <span>{platformStats[activeStatIndex].value} {platformStats[activeStatIndex].label}</span>
                   </div>
                 </div>
                 
-                <div className="flex justify-center mt-4">
+                <div className="flex justify-center mt-4 md:hidden">
                   <div className="inline-flex p-1 bg-muted/30 backdrop-blur-sm rounded-full">
                     {platformStats.map((_, index) => (
                       <button
@@ -1628,6 +1758,86 @@ const AboutPage = () => {
                       ></button>
                     ))}
                   </div>
+                </div>
+              </div>
+              
+              {/* Stats selector column - takes full width on mobile, 2/5 on desktop */}
+              <div className="lg:col-span-2 order-2">
+                <div className="relative">
+                  {/* Code-inspired decoration */}
+                  <div className="absolute -left-4 top-0 bottom-0 border-l-2 border-dashed border-border/30 hidden lg:block"></div>
+                  <div className="mb-4 md:mb-6">
+                    <div className="flex items-center space-x-2 mb-1 md:mb-2">
+                      <div className="h-3 w-3 md:h-4 md:w-4 rounded-full bg-primary/10 flex items-center justify-center">
+                        <div className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-primary"></div>
+                      </div>
+                      <div className="font-mono text-[10px] md:text-xs text-muted-foreground">
+                        SELECT * FROM metrics WHERE platform = 'ByteInit'
+                      </div>
+                    </div>
+                    <div className="font-mono text-[10px] md:text-xs text-muted-foreground ml-5 md:ml-6">
+                      <span className="opacity-50">// Click to visualize each metric</span>
+                    </div>
+                  </div>
+                  
+                  {/* Progress indicator */}
+                  <div className="flex items-center justify-between mb-4 md:mb-6 px-1">
+                    <div className="text-[10px] md:text-xs text-muted-foreground font-mono">
+                      metrics[<span className="text-primary">{activeStatIndex + 1}</span>/{platformStats.length}]
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      {platformStats.map((_, index) => (
+                        <div 
+                          key={index} 
+                          className={cn(
+                            "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all duration-300",
+                            activeStatIndex === index 
+                              ? "bg-primary" 
+                              : "bg-border hover:bg-primary/50 cursor-pointer"
+                          )}
+                          onClick={() => setActiveStatIndex(index)}
+                        ></div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <StatsSelector />
+                  
+                  <div className="mt-6 md:mt-8 md:ml-6 border border-border/50 rounded-md p-3 md:p-4 bg-zinc-50/80 dark:bg-zinc-900/50 backdrop-blur-sm">
+                    <p className="text-[10px] md:text-xs text-muted-foreground">
+                      <span className="font-semibold block mb-1">Data source:</span>
+                      All metrics are collected from real platform usage. Updated daily to reflect current growth and user engagement.
+                    </p>
+                    <div className="mt-2 md:mt-3 flex justify-between items-center text-[10px] md:text-xs">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative h-1.5 w-1.5 md:h-2 md:w-2">
+                          <div className="absolute animate-ping h-full w-full rounded-full bg-emerald-400 opacity-75"></div>
+                          <div className="relative rounded-full h-1.5 w-1.5 md:h-2 md:w-2 bg-emerald-500"></div>
+                        </div>
+                        <span>Live data</span>
+                      </div>
+                      <span>Last updated: {new Date().toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Pagination dots on desktop */}
+              <div className="hidden md:flex lg:col-span-3 order-3 justify-center mt-4">
+                <div className="inline-flex p-1 bg-muted/30 backdrop-blur-sm rounded-full">
+                  {platformStats.map((_, index) => (
+                    <button
+                      key={index}
+                      className={cn(
+                        "w-2 h-2 mx-1 rounded-full transition-all duration-300",
+                        activeStatIndex === index 
+                          ? "bg-primary" 
+                          : "bg-border hover:bg-primary/50"
+                      )}
+                      onClick={() => setActiveStatIndex(index)}
+                      aria-label={`View ${platformStats[index].label} stats`}
+                    ></button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1664,9 +1874,9 @@ const AboutPage = () => {
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
                   </div>
-                </div>
               </div>
-              
+            </div>
+            
             {/* Right: Creator Bio */}
             <div className="space-y-6">
               <motion.div
@@ -1681,64 +1891,24 @@ const AboutPage = () => {
                     <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary">Full Stack Dev</span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <a 
-                      href="https://developerashish.vercel.app" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-all duration-200"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://github.com/ashish-makes" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-all duration-200"
-                    >
-                      <Github className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://www.linkedin.com/in/ashish-makes/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-all duration-200"
-                    >
-                      <Linkedin className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://x.com/ashishmakes" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-all duration-200"
-                    >
-                      <Twitter className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="mailto:ashindia.003@gmail.com" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-all duration-200"
-                    >
-                      <Mail className="h-4 w-4" />
-                    </a>
-              </div>
-            </div>
-            
+                  {/* Replace static social links with dropdown */}
+                  <SocialLinksDropdown />
+                </div>
+                
                 <div className="space-y-2">
-                  <p className="text-muted-foreground">
+                <p className="text-muted-foreground">
                     Full-stack developer with expertise in building scalable web applications using modern JavaScript frameworks. Experienced in React, Next.js, and Node.js ecosystems with a focus on creating performant user experiences.
-                  </p>
-                  <p className="text-muted-foreground">
+                </p>
+                <p className="text-muted-foreground">
                     Passionate about clean code, responsive design, and accessibility. Currently building ByteInit, a developer platform to unify resource discovery and knowledge sharing in one place.
-                  </p>
+                </p>
                 </div>
               </motion.div>
               
               <div className="grid grid-cols-4 gap-3">
-              <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.1 }}
                   className="p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 text-center"
                 >
@@ -1779,14 +1949,7 @@ const AboutPage = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
-                <h4 className="text-sm font-medium mb-3">Tech Stack</h4>
-                <div className="flex flex-wrap gap-2">
-                  {["React", "Next.js", "TypeScript", "Node.js", "Tailwind"].map((tech, index) => (
-                    <Badge key={index} variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                      {tech}
-                    </Badge>
-                  ))}
-                </div>
+                {/* Tech stack section removed */}
               </motion.div>
               
               <motion.div 
@@ -1813,6 +1976,131 @@ const AboutPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Footer - with updated CTA */}
+      <section className="py-24 bg-background border-t border-border/20">
+        <div className="container max-w-6xl mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <Badge className="mb-3 text-xs rounded-full px-3 py-1 bg-background border-zinc-200 dark:border-zinc-800" variant="outline">Join Us</Badge>
+            <motion.h2 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.7 }}
+              className="text-3xl md:text-4xl font-bold mb-6"
+            >
+              Ready to enhance your developer journey?
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-muted-foreground mb-8 max-w-xl mx-auto"
+            >
+              Join ByteInit today and become part of a growing community of developers sharing resources, knowledge, and opportunities.
+            </motion.p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="rounded-full">
+                Get Started
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button size="lg" variant="outline" className="rounded-full">
+                View Resources
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// Add before AboutPage component
+const SocialLinksDropdown = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const socialLinks = [
+    { icon: <ExternalLink className="h-4 w-4" />, url: "https://developerashish.vercel.app", label: "Portfolio" },
+    { icon: <Github className="h-4 w-4" />, url: "https://github.com/ashish-makes", label: "GitHub" },
+    { icon: <Linkedin className="h-4 w-4" />, url: "https://www.linkedin.com/in/ashish-makes/", label: "LinkedIn" },
+    { icon: <Twitter className="h-4 w-4" />, url: "https://x.com/ashishmakes", label: "Twitter" },
+    { icon: <Mail className="h-4 w-4" />, url: "mailto:ashindia.003@gmail.com", label: "Email" }
+  ];
+  
+  // Handle clicking outside to close the dropdown
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+  
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200",
+          "bg-primary/10 text-primary hover:bg-primary/20",
+          "flex items-center gap-1.5"
+        )}
+        aria-label="Connect with me"
+      >
+        Connect
+        <div className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          isOpen ? "bg-green-500" : "bg-primary"
+        )}></div>
+      </button>
+      
+      {isOpen && (
+        <motion.div 
+          initial={{ opacity: 0, y: -5, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -5, scale: 0.98 }}
+          transition={{ duration: 0.15 }}
+          className="absolute top-full right-0 mt-2 bg-card/95 backdrop-blur-sm shadow-lg rounded-xl overflow-hidden border border-border/40 z-20 w-56"
+        >
+          <div className="p-1.5">
+            <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+              Let's Connect
+            </div>
+            
+            <div className="mt-1 grid gap-1">
+              {socialLinks.map((link, index) => (
+                <motion.a
+                  key={index}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-muted/60 transition-colors"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15, delay: index * 0.03 }}
+                  whileHover={{ x: 3 }}
+                >
+                  <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-muted/50 text-foreground">
+                    {link.icon}
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium">{link.label}</span>
+                  </div>
+                </motion.a>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };

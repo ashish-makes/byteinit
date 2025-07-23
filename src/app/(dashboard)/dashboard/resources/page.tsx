@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils"
 import { DeleteResourceButton } from "@/components/resources/DeleteResourceButton"
 import type { ResourceCategory, ResourceType } from "@prisma/client"
 import { revalidatePath } from "next/cache"
+import { FilterPanel } from "@/components/resources/FilterPanel"
 
 type SortOption = {
   label: string
@@ -187,235 +188,159 @@ export default async function ResourcesDashboard({
   })
 
   return (
-    <div className="-m-8">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-6 sm:px-8 py-4 border-b">
-          <div className="flex items-center justify-between gap-4 max-w-[1400px] mx-auto">
-            {/* Search */}
-            <div className="flex-1 max-w-xl relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-              <form className="relative" action="/dashboard/resources">
-                <Input
-                  name="query"
-                  defaultValue={query}
-                  placeholder="Search resources..."
-                  className="pl-9 pr-9 h-9 bg-muted/40 border-muted-foreground/10 hover:border-muted-foreground/20"
-                />
-                {query && (
-                  <Link
-                    href="/dashboard/resources"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Clear search</span>
-                  </Link>
-                )}
-              </form>
-            </div>
-
-            {/* Filters and Sort */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-9 px-2 lg:px-3 border-muted-foreground/10"
-                  >
-                    <SlidersHorizontal className="h-4 w-4 lg:mr-2" />
-                    <span className="hidden lg:inline">
-                      {filterOptions.find(option => option.value === filter)?.label || 'All Resources'}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel className="text-xs">Filter Resources</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {filterOptions.map((option) => (
-                    <DropdownMenuItem key={option.value} asChild>
-                      <Link
-                        href={`/dashboard/resources?${new URLSearchParams({
-                          ...(query ? { query } : {}),
-                          ...(sort !== 'date' ? { sort } : {}),
-                          ...(option.value !== 'all' ? { filter: option.value } : {})
-                        })}`}
-                        className="flex items-center justify-between py-1.5"
-                      >
-                        {option.label}
-                        {filter === option.value && (
-                          <Check className="h-4 w-4 text-primary" />
-                        )}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-9 px-2 lg:px-3 border-muted-foreground/10"
-                  >
-                    <ArrowUpDown className="h-4 w-4 lg:mr-2" />
-                    <span className="hidden lg:inline">
-                      {sortOptions.find(option => option.value === sort)?.label || 'Sort'}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel className="text-xs">Sort Resources</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {sortOptions.map((option) => (
-                    <DropdownMenuItem key={option.value} asChild>
-                      <Link 
-                        href={`/dashboard/resources?${new URLSearchParams({
-                          ...(query ? { query } : {}),
-                          ...(option.value !== 'date' ? { sort: option.value } : {}),
-                          ...(filter !== 'all' ? { filter } : {})
-                        })}`}
-                        className="flex items-center justify-between py-1.5"
-                      >
-                        <div className="flex items-center">
-                          <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
-                          {option.label}
-                        </div>
-                        {sort === option.value && (
-                          <Check className="h-4 w-4 text-primary" />
-                        )}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="w-full">
       {/* Content */}
-      <div className="p-8">
+      <div className="px-4 sm:px-6 lg:px-8 py-8">
         <Suspense fallback={<ResourcesTableSkeleton />}>
           {resources.length > 0 ? (
-            <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
-              <Table className="[&_tr:last-child]:border-0 [&_tr:hover]:bg-muted/50 [&_td]:py-4">
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-[400px] text-xs font-medium">Resource</TableHead>
-                    <TableHead className="w-[100px] text-right text-xs font-medium">Category</TableHead>
-                    <TableHead className="w-[80px] text-right text-xs font-medium">Type</TableHead>
-                    <TableHead className="w-[100px] text-right text-xs font-medium">Date</TableHead>
-                    <TableHead className="w-[70px] text-right text-xs font-medium">Likes</TableHead>
-                    <TableHead className="w-[70px] text-right text-xs font-medium">Saves</TableHead>
-                    <TableHead className="w-[100px] text-right text-xs font-medium">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {resources.map((resource) => (
-                    <TableRow key={resource.id} className="group border-border/50">
-                      <TableCell>
-                        <div className="space-y-1.5">
-                          <Link 
-                            href={`/dashboard/resources/${resource.id}`}
-                            className="font-medium hover:text-primary transition-colors line-clamp-1 block"
-                          >
-                            {resource.title}
-                          </Link>
-                          <div className="text-sm text-muted-foreground/80 line-clamp-2">
-                            {resource.description}
-                          </div>
-                          {resource.tags?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {resource.tags.slice(0, 3).map((tag: string) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-0.5 bg-muted/50 text-[11px] rounded-full font-medium"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                              {resource.tags.length > 3 && (
-                                <span className="text-[11px] text-muted-foreground">
-                                  +{resource.tags.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={cn(
-                          "text-xs px-2.5 py-1 rounded-full font-medium",
-                          "bg-blue-100/50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-500"
-                        )}>
-                          {resource.category}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={cn(
-                          "text-xs px-2.5 py-1 rounded-full font-medium",
-                          "bg-purple-100/50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-500"
-                        )}>
-                          {resource.type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-xs text-muted-foreground/80">
-                          {formatDistanceToNowStrict(new Date(resource.createdAt))} ago
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        <span className="text-sm text-muted-foreground/80">{resource.likes}</span>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        <span className="text-sm text-muted-foreground/80">{resource.saves}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-muted"
-                            asChild
-                          >
-                            <Link href={`/dashboard/resources/edit/${resource.id}`}>
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit resource</span>
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-muted"
-                            asChild
-                          >
-                            <Link 
-                              href={`/resources/${resource.id}`}
-                              target="_blank"
-                              className="relative group/tooltip"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                              <span className="sr-only">View resource</span>
-                              <span className="absolute -top-9 right-0 w-fit px-2 py-1 bg-popover text-popover-foreground text-xs rounded-md shadow-sm invisible group-hover/tooltip:visible whitespace-nowrap">
-                                View resource
-                              </span>
-                            </Link>
-                          </Button>
-                          <DeleteResourceButton 
-                            resourceId={resource.id} 
-                            deleteResource={deleteResource}
-                          />
-                        </div>
-                      </TableCell>
+            <div className="rounded-xl bg-white dark:bg-card/40 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table className="[&_tr:last-child]:border-0 [&_tr:hover]:bg-muted/50 min-w-[920px]">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/50">
+                      <TableHead className="w-[300px] lg:w-[400px] text-xs font-medium text-muted-foreground">Resource</TableHead>
+                      <TableHead className="w-[100px] text-right text-xs font-medium text-muted-foreground">Category</TableHead>
+                      <TableHead className="w-[80px] text-right text-xs font-medium text-muted-foreground">Type</TableHead>
+                      <TableHead className="w-[100px] text-right text-xs font-medium text-muted-foreground">Date</TableHead>
+                      <TableHead className="w-[70px] text-right text-xs font-medium text-muted-foreground">
+                        <span>Likes</span>
+                      </TableHead>
+                      <TableHead className="w-[70px] text-right text-xs font-medium text-muted-foreground">
+                        <span>Saves</span>
+                      </TableHead>
+                      <TableHead className="w-[100px] text-right text-xs font-medium text-muted-foreground">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {resources.map((resource) => (
+                      <TableRow key={resource.id} className="group border-border/50">
+                        <TableCell className="py-4">
+                          <div className="space-y-1 max-w-[260px] lg:max-w-[360px]">
+                            <div className="flex items-center gap-2">
+                              <Link 
+                                href={`/dashboard/resources/${resource.id}`}
+                                className="font-medium hover:text-primary transition-colors line-clamp-1 block"
+                              >
+                                {resource.title}
+                              </Link>
+                              <Link
+                                href={resource.url}
+                                target="_blank"
+                                className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Link>
+                            </div>
+                            <div className="text-sm text-muted-foreground/80 line-clamp-1">
+                              {resource.description}
+                            </div>
+                            {resource.tags?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {resource.tags.slice(0, 2).map((tag: string) => (
+                                  <span
+                                    key={tag}
+                                    className="px-2 py-0.5 bg-muted/50 text-[11px] rounded-full font-medium text-muted-foreground/90"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                                {resource.tags.length > 2 && (
+                                  <span className="text-[11px] text-muted-foreground/70">
+                                    +{resource.tags.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex justify-end">
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full font-medium",
+                              "bg-blue-100/50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-500"
+                            )}>
+                              {resource.category}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex justify-end">
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full font-medium",
+                              "bg-purple-100/50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-500"
+                            )}>
+                              {resource.type}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="text-right">
+                            <span className="text-xs text-muted-foreground/80">
+                              {formatDistanceToNowStrict(new Date(resource.createdAt))} ago
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex items-center justify-end gap-1">
+                            <Heart className="h-3.5 w-3.5 text-muted-foreground/50" />
+                            <span className="text-sm tabular-nums text-muted-foreground/80">
+                              {resource.likes}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex items-center justify-end gap-1">
+                            <Bookmark className="h-3.5 w-3.5 text-muted-foreground/50" />
+                            <span className="text-sm tabular-nums text-muted-foreground/80">
+                              {resource.saves}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-muted"
+                              asChild
+                            >
+                              <Link href={`/dashboard/resources/edit/${resource.id}`}>
+                                <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                <span className="sr-only">Edit resource</span>
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-primary hover:bg-muted"
+                              asChild
+                            >
+                              <Link 
+                                href={resource.url}
+                                target="_blank"
+                                className="relative group/tooltip"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                <span className="sr-only">Visit resource</span>
+                                <span className="absolute -top-9 right-0 w-fit px-2 py-1 bg-popover text-popover-foreground text-xs rounded-md shadow-sm invisible group-hover/tooltip:visible whitespace-nowrap">
+                                  Visit resource
+                                </span>
+                              </Link>
+                            </Button>
+                            <DeleteResourceButton 
+                              resourceId={resource.id} 
+                              deleteResource={deleteResource}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-border/50 bg-card p-12">
+            <div className="rounded-xl bg-white dark:bg-card/40 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] p-12">
               <div className="flex flex-col items-center justify-center text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
                   <SlidersHorizontal className="h-10 w-10 text-muted-foreground" />
@@ -455,6 +380,9 @@ export default async function ResourcesDashboard({
           )}
         </Suspense>
       </div>
+
+      {/* Filter Panel */}
+      <FilterPanel query={query} sort={sort} filter={filter} />
     </div>
   )
 }

@@ -192,38 +192,55 @@ export async function GET(
       apiKey: process.env.GROQ_API_KEY,
     });
 
-    // Generate a narrative bio using a witty developer voice
+    // Generate a professional bio with a developer focus
     const completion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: `You are a witty developer bio writer who loves tech puns and coding humor.
-            Create engaging, fun narratives that blend technical expertise with personality.
-            Use casual developer lingo, occasional tech jokes, and clever wordplay.
-            Keep it professional but fun - think "debugging life one coffee at a time" style.
-            Include a fun tagline or catchphrase that reflects their tech stack.
-            Return the response in JSON format.`,
+          content: `You are a professional bio writer specializing in developer profiles. Create concise, impactful bios that:
+- Highlight technical expertise and achievements
+- Maintain a professional tone while showing personality
+- Focus on value proposition and impact
+- Include relevant tech stack and experience
+- Keep length between 2-3 sentences for bio
+- Create a one-line tagline that captures their professional essence
+
+Return ONLY a JSON object with exactly these fields:
+{
+  "bio": "professional bio text",
+  "tagline": "professional tagline"
+}`
         },
         {
           role: "user",
-          content: `Create a fun, dev-style bio using this information:
-            ${JSON.stringify(userDetails, null, 2)}
-            
-            Add personality with:
-            - A clever tech-related tagline
-            - Light coding humor
-            - Developer culture references
-            - Coffee or debugging jokes if appropriate
-            - Playful tech stack presentation
-            
-            Keep it professional enough for recruiters but fun enough for fellow devs.
-            
-            Return in the same JSON format as before.`,
-        },
+          content: `Create a professional bio and tagline for this developer profile. Focus on their technical expertise and unique value proposition:
+
+${JSON.stringify({
+  name: userDetails.name,
+  github: userDetails.github,
+  techStack: userDetails.techStack,
+  currentRole: userDetails.currentRole,
+  company: userDetails.company,
+  yearsOfExperience: userDetails.yearsOfExperience,
+  lookingForWork: userDetails.lookingForWork
+}, null, 2)}
+
+Guidelines:
+- Write in third person
+- Highlight technical expertise first
+- Mention current role/company if available
+- Include years of experience if available
+- Note if they're open to opportunities
+- Keep it professional but personable
+- Focus on impact and value-add
+- Incorporate tech stack naturally
+
+Return as JSON with only bio and tagline fields.`
+        }
       ],
       model: "llama3-70b-8192",
-      temperature: 0.8,
-      response_format: { type: "json_object" },
+      temperature: 0.6,
+      response_format: { type: "json_object" }
     });
 
     const content = completion.choices[0].message.content;
@@ -235,24 +252,26 @@ export async function GET(
 
     // Merge core user details with the generated narrative while preserving certain values
     const enhancedProfile = {
-      ...generatedData,
       id: userDetails.id,
       username: userDetails.username,
       name: userDetails.name,
       email: userDetails.email,
       image: userDetails.image,
-      github: userDetails.github || generatedData.github,
+      bio: generatedData.bio || userDetails.bio || "",
+      tagline: generatedData.tagline || "",
+      github: userDetails.github,
       website: userDetails.website
         ? userDetails.website.startsWith("http")
           ? userDetails.website
           : `https://${userDetails.website}`
-        : generatedData.website,
+        : null,
       lookingForWork: userDetails.lookingForWork ?? false,
       resources: userDetails.resources || [],
-      techStack: userDetails.techStack || generatedData.techStack,
-      currentRole: userDetails.currentRole || generatedData.currentRole,
-      company: userDetails.company || generatedData.company,
-      location: userDetails.location || generatedData.location,
+      techStack: userDetails.techStack,
+      currentRole: userDetails.currentRole,
+      company: userDetails.company,
+      location: userDetails.location,
+      yearsOfExperience: userDetails.yearsOfExperience,
       followerCount: userDetails._count.followers,
       followingCount: userDetails._count.following,
       isFollowing: currentUserId ? userDetails.followers.some(f => f.id === currentUserId) : false,

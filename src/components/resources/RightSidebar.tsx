@@ -135,7 +135,7 @@ const RightSidebar = ({ trendingResources = [] }: RightSidebarProps) => {
           <div className="px-3 py-2 bg-accent/30 rounded-lg">
             <p className="text-sm mb-2">Found a useful resource? Share it with the community!</p>
             <Button size="sm" className="w-full" asChild>
-              <Link href="/resources/submit">
+              <Link href="/dashboard/resources/new">
                 Submit a Resource
               </Link>
             </Button>

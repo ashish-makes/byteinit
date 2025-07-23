@@ -48,6 +48,8 @@ import {
   TooltipProvider, 
   TooltipTrigger 
 } from '@/components/ui/tooltip'
+import { useTheme } from "next-themes"
+import Image from "next/image"
 
 interface BlogHeaderProps {
   searchTerm?: string;
@@ -209,6 +211,7 @@ export function BlogHeader({
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user
   const [copied, setCopied] = useState(false)
+  const { resolvedTheme } = useTheme()
 
   const getProfileUrl = () => {
     const identifier = session?.user?.username || session?.user?.email?.split('@')?.[0] || '';
@@ -242,6 +245,8 @@ export function BlogHeader({
       .join('');
   };
 
+  const logoSrc = resolvedTheme === 'dark' ? '/logo-dark.svg' : '/logo-light.svg';
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden">
       <div className="flex items-center justify-between h-11 px-2 gap-1 max-w-full">
@@ -249,8 +254,13 @@ export function BlogHeader({
         <div className="flex items-center gap-1 min-w-fit">
           <MobileNav />
           <Link href="/" className="font-semibold text-sm whitespace-nowrap flex items-center gap-1">
-            <Home className="h-3.5 w-3.5" />
-            <span>Byteinit</span>
+            <Image 
+              src={logoSrc} 
+              alt="Byteinit Logo" 
+              width={20} 
+              height={20}
+              className="transition-opacity"
+            />
           </Link>
           <Link href="/blog" className="text-xs text-muted-foreground ml-1 hidden sm:block">
             <span>Blog</span>
@@ -282,7 +292,7 @@ export function BlogHeader({
                       className="h-7 w-7 rounded-full p-0 flex items-center justify-center"
                       asChild
                     >
-                      <Link href="/blog/editor">
+                      <Link href="/dashboard/blog/new">
                         <Plus className="h-3.5 w-3.5" />
                         <span className="sr-only">Create post</span>
                       </Link>

@@ -229,146 +229,148 @@ export default function ResourceUploadForm() {
   };
 
   return (
-    <div className="w-full dark:bg-background/50 bg-white dark:border dark:border-border rounded-lg shadow-sm p-6">
-      <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
-        <Upload className="h-6 w-6 text-primary" />
-        Upload New Resource
-      </h2>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-4">
-          {/* Title - Highest Priority Field */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Resource Title *</Label>
-            <Input
-              id="title"
-              {...form.register('title')}
-              placeholder="Enter a descriptive title for the resource"
-              aria-invalid={form.formState.errors.title ? "true" : "false"}
-              className="w-full"
-            />
-            {form.formState.errors.title && (
-              <p className="text-xs text-destructive" role="alert">
-                {form.formState.errors.title.message}
-              </p>
-            )}
-          </div>
-
-          {/* URL - Second Highest Priority */}
-          <div className="space-y-2">
-            <Label htmlFor="url">Resource URL *</Label>
-            <Input
-              id="url"
-              {...form.register('url')}
-              placeholder="https://example.com/resource"
-              aria-invalid={form.formState.errors.url ? "true" : "false"}
-              className="w-full"
-            />
-            {form.formState.errors.url && (
-              <p className="text-xs text-destructive" role="alert">
-                {form.formState.errors.url.message}
-              </p>
-            )}
-          </div>
-
-          {/* Type and Category - Third Priority */}
-          <div className="grid md:grid-cols-2 gap-4">
+    <div className="px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <div className="bg-white dark:bg-background/50 rounded-xl shadow-[0_4px_24px_-8px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] p-6 sm:p-8">
+        <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
+          <Upload className="h-6 w-6 text-primary" />
+          Upload New Resource
+        </h2>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-4">
+            {/* Title - Highest Priority Field */}
             <div className="space-y-2">
-              <Label>Resource Type *</Label>
-              <Controller
-                name="type"
-                control={form.control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger aria-label="Select resource type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RESOURCE_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {formatEnumValue(type)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+              <Label htmlFor="title">Resource Title *</Label>
+              <Input
+                id="title"
+                {...form.register('title')}
+                placeholder="Enter a descriptive title for the resource"
+                aria-invalid={form.formState.errors.title ? "true" : "false"}
+                className="w-full"
               />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Category *</Label>
-              <Controller
-                name="category"
-                control={form.control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger aria-label="Select resource category">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RESOURCE_CATEGORIES.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {formatEnumValue(category)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Description - Now Required */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
-              {...form.register('description')}
-              placeholder="Provide additional details about the resource"
-              className="w-full min-h-[100px]"
-            />
-            {form.formState.errors.description && (
-              <p className="text-xs text-destructive" role="alert">
-                {form.formState.errors.description.message}
-              </p>
-            )}
-          </div>
-
-          {/* Tags - Using new TagInput component */}
-          <div className="space-y-2">
-            <Label>Tags</Label>
-            <Controller
-              name="tags"
-              control={form.control}
-              render={({ field }) => (
-                <TagInput
-                  value={field.value || ''}
-                  onChange={field.onChange}
-                />
+              {form.formState.errors.title && (
+                <p className="text-xs text-destructive" role="alert">
+                  {form.formState.errors.title.message}
+                </p>
               )}
-            />
-          </div>
-        </div>
+            </div>
 
-        {/* Submit Button */}
-        <Button 
-          type="submit" 
-          className="w-full mt-6"
-          disabled={isSubmitting}
-          aria-busy={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Uploading...
-            </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Resource
-            </>
-          )}
-        </Button>
-      </form>
+            {/* URL - Second Highest Priority */}
+            <div className="space-y-2">
+              <Label htmlFor="url">Resource URL *</Label>
+              <Input
+                id="url"
+                {...form.register('url')}
+                placeholder="https://example.com/resource"
+                aria-invalid={form.formState.errors.url ? "true" : "false"}
+                className="w-full"
+              />
+              {form.formState.errors.url && (
+                <p className="text-xs text-destructive" role="alert">
+                  {form.formState.errors.url.message}
+                </p>
+              )}
+            </div>
+
+            {/* Type and Category - Third Priority */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Resource Type *</Label>
+                <Controller
+                  name="type"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger aria-label="Select resource type">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RESOURCE_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {formatEnumValue(type)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Category *</Label>
+                <Controller
+                  name="category"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger aria-label="Select resource category">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RESOURCE_CATEGORIES.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {formatEnumValue(category)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Description - Now Required */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Description *</Label>
+              <Textarea
+                id="description"
+                {...form.register('description')}
+                placeholder="Provide additional details about the resource"
+                className="w-full min-h-[100px]"
+              />
+              {form.formState.errors.description && (
+                <p className="text-xs text-destructive" role="alert">
+                  {form.formState.errors.description.message}
+                </p>
+              )}
+            </div>
+
+            {/* Tags - Using new TagInput component */}
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <Controller
+                name="tags"
+                control={form.control}
+                render={({ field }) => (
+                  <TagInput
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <Button 
+            type="submit" 
+            className="w-full mt-6"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Resource
+              </>
+            )}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

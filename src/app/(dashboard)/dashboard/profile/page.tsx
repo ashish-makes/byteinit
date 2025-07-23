@@ -845,15 +845,17 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <div className="flex h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
 
   return (
-    <Card className="border-none shadow-none">
-      <CardContent className="pt-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <div className="bg-white dark:bg-card/40 rounded-xl shadow-[0_4px_24px_-8px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] p-6 sm:p-8">
         {isEditing ? (
           <EditMode
             onSubmit={handleSubmit}
@@ -870,7 +872,7 @@ export default function ProfilePage() {
             setCopySuccess={setCopySuccess}
           />
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

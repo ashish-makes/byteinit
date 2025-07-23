@@ -327,205 +327,207 @@ export default function NewBlogPost() {
   const showSummaryIndicator = touchedFields.summary && summaryFeedback.type !== 'success'
 
   return (
-    <div className="w-full dark:bg-background/50 bg-white dark:border dark:border-border rounded-lg shadow-sm p-6">
-      <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
-        <Upload className="h-6 w-6 text-primary" />
-        Create New Blog Post
-      </h2>
+    <div className="px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <div className="bg-white dark:bg-background/50 rounded-xl shadow-[0_4px_24px_-8px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] p-6 sm:p-8">
+        <h2 className="text-2xl font-semibold mb-6 flex items-center gap-3">
+          <Upload className="h-6 w-6 text-primary" />
+          Create New Blog Post
+        </h2>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="title">Title *</Label>
-              <SEOIndicator 
-                feedback={titleFeedback} 
-                show={showTitleIndicator}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="title">Title *</Label>
+                <SEOIndicator 
+                  feedback={titleFeedback} 
+                  show={showTitleIndicator}
+                />
+              </div>
+              <Input
+                id="title"
+                {...form.register('title')}
+                placeholder="My Awesome Blog Post"
+                onFocus={() => setTouchedFields(prev => ({ ...prev, title: true }))}
               />
+              <p className="text-xs text-muted-foreground">
+                {showTitleIndicator && `${titleFeedback.message} `}
+                ({form.watch('title')?.length || 0}/70 characters)
+              </p>
             </div>
-            <Input
-              id="title"
-              {...form.register('title')}
-              placeholder="My Awesome Blog Post"
-              onFocus={() => setTouchedFields(prev => ({ ...prev, title: true }))}
-            />
-            <p className="text-xs text-muted-foreground">
-              {showTitleIndicator && `${titleFeedback.message} `}
-              ({form.watch('title')?.length || 0}/70 characters)
-            </p>
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="slug">URL Slug *</Label>
-              <SEOIndicator 
-                feedback={slugFeedback} 
-                show={showSlugIndicator}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="slug">URL Slug *</Label>
+                <SEOIndicator 
+                  feedback={slugFeedback} 
+                  show={showSlugIndicator}
+                />
+              </div>
+              <Input
+                id="slug"
+                {...form.register('slug')}
+                placeholder="my-awesome-blog-post"
+                disabled={!isSlugEdited}
+                onChange={(e) => {
+                  if (!isSlugEdited) {
+                    setIsSlugEdited(true)
+                  }
+                  form.setValue('slug', e.target.value, { shouldValidate: true })
+                }}
               />
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  This will be the URL of your post: /blog/<span className="font-mono">{form.watch('slug') || 'url-slug'}</span>
+                  {showSlugIndicator && <span className="ml-1">• {slugFeedback.message}</span>}
+                </p>
+                {isSlugEdited && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsSlugEdited(false)
+                      form.setValue('slug', generateSlug(form.watch('title')))
+                    }}
+                  >
+                    Reset to auto-generate
+                  </Button>
+                )}
+              </div>
             </div>
-            <Input
-              id="slug"
-              {...form.register('slug')}
-              placeholder="my-awesome-blog-post"
-              disabled={!isSlugEdited}
-              onChange={(e) => {
-                if (!isSlugEdited) {
-                  setIsSlugEdited(true)
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="summary">Summary</Label>
+                <SEOIndicator 
+                  feedback={summaryFeedback} 
+                  show={showSummaryIndicator}
+                />
+              </div>
+              <Textarea
+                id="summary"
+                {...form.register('summary')}
+                placeholder="Brief description of your post..."
+                onFocus={() => setTouchedFields(prev => ({ ...prev, summary: true }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                {showSummaryIndicator && `${summaryFeedback.message} `}
+                ({form.watch('summary')?.length || 0}/160 characters)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Content *</Label>
+              <Controller
+                name="content"
+                control={form.control}
+                render={({ field }) => (
+                  <Editor
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Write your post content here..."
+                  />
+                )}
+              />
+              {form.formState.errors.content && (
+                <p className="text-xs text-destructive">{form.formState.errors.content.message}</p>
+              )}
+            </div>
+
+            <ImageUpload
+              value={form.watch('coverImage')}
+              onChange={async (url) => {
+                // If it's a blob URL, we need to upload it first
+                if (url.startsWith('blob:')) {
+                  try {
+                    const response = await fetch(url)
+                    const blob = await response.blob()
+                    const formData = new FormData()
+                    formData.append('file', blob)
+
+                    const uploadResponse = await fetch('/api/upload', {
+                      method: 'POST',
+                      body: formData,
+                    })
+
+                    if (!uploadResponse.ok) {
+                      throw new Error('Failed to upload image')
+                    }
+
+                    const { url: permanentUrl } = await uploadResponse.json()
+                    form.setValue('coverImage', permanentUrl)
+                  } catch (error) {
+                    console.error('Error uploading image:', error)
+                    toast.error('Failed to upload cover image')
+                  }
+                } else {
+                  form.setValue('coverImage', url)
                 }
-                form.setValue('slug', e.target.value, { shouldValidate: true })
+              }}
+              onRemove={() => {
+                const currentImage = form.watch('coverImage')
+                if (currentImage?.startsWith('blob:')) {
+                  URL.revokeObjectURL(currentImage)
+                }
+                form.setValue('coverImage', '')
               }}
             />
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                This will be the URL of your post: /blog/<span className="font-mono">{form.watch('slug') || 'url-slug'}</span>
-                {showSlugIndicator && <span className="ml-1">• {slugFeedback.message}</span>}
-              </p>
-              {isSlugEdited && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsSlugEdited(false)
-                    form.setValue('slug', generateSlug(form.watch('title')))
-                  }}
-                >
-                  Reset to auto-generate
-                </Button>
-              )}
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="summary">Summary</Label>
-              <SEOIndicator 
-                feedback={summaryFeedback} 
-                show={showSummaryIndicator}
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <Controller
+                name="tags"
+                control={form.control}
+                render={({ field }) => (
+                  <TagInput
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                  />
+                )}
               />
             </div>
-            <Textarea
-              id="summary"
-              {...form.register('summary')}
-              placeholder="Brief description of your post..."
-              onFocus={() => setTouchedFields(prev => ({ ...prev, summary: true }))}
-            />
-            <p className="text-xs text-muted-foreground">
-              {showSummaryIndicator && `${summaryFeedback.message} `}
-              ({form.watch('summary')?.length || 0}/160 characters)
-            </p>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Content *</Label>
-            <Controller
-              name="content"
-              control={form.control}
-              render={({ field }) => (
-                <Editor
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Write your post content here..."
-                />
-              )}
-            />
-            {form.formState.errors.content && (
-              <p className="text-xs text-destructive">{form.formState.errors.content.message}</p>
-            )}
-          </div>
-
-          <ImageUpload
-            value={form.watch('coverImage')}
-            onChange={async (url) => {
-              // If it's a blob URL, we need to upload it first
-              if (url.startsWith('blob:')) {
-                try {
-                  const response = await fetch(url)
-                  const blob = await response.blob()
-                  const formData = new FormData()
-                  formData.append('file', blob)
-
-                  const uploadResponse = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData,
-                  })
-
-                  if (!uploadResponse.ok) {
-                    throw new Error('Failed to upload image')
-                  }
-
-                  const { url: permanentUrl } = await uploadResponse.json()
-                  form.setValue('coverImage', permanentUrl)
-                } catch (error) {
-                  console.error('Error uploading image:', error)
-                  toast.error('Failed to upload cover image')
-                }
-              } else {
-                form.setValue('coverImage', url)
-              }
-            }}
-            onRemove={() => {
-              const currentImage = form.watch('coverImage')
-              if (currentImage?.startsWith('blob:')) {
-                URL.revokeObjectURL(currentImage)
-              }
-              form.setValue('coverImage', '')
-            }}
-          />
-
-          <div className="space-y-2">
-            <Label>Tags</Label>
-            <Controller
-              name="tags"
-              control={form.control}
-              render={({ field }) => (
-                <TagInput
-                  value={field.value}
-                  onChange={(value) => field.onChange(value)}
-                />
-              )}
-            />
-          </div>
-
-          <div className="flex items-center justify-between space-y-2">
-            <div className="space-y-0.5">
-              <Label htmlFor="published">Publishing Status</Label>
-              <p className="text-sm text-muted-foreground">
-                Toggle to publish your post immediately
-              </p>
+            <div className="flex items-center justify-between space-y-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="published">Publishing Status</Label>
+                <p className="text-sm text-muted-foreground">
+                  Toggle to publish your post immediately
+                </p>
+              </div>
+              <Controller
+                name="published"
+                control={form.control}
+                render={({ field }) => (
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    aria-label="Published status"
+                  />
+                )}
+              />
             </div>
-            <Controller
-              name="published"
-              control={form.control}
-              render={({ field }) => (
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  aria-label="Published status"
-                />
-              )}
-            />
           </div>
-        </div>
 
-        <Button 
-          type="submit" 
-          className="w-full"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {form.watch('published') ? 'Publishing Post...' : 'Saving Draft...'}
-            </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" />
-              {form.watch('published') ? 'Publish Post' : 'Save as Draft'}
-            </>
-          )}
-        </Button>
-      </form>
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {form.watch('published') ? 'Publishing Post...' : 'Saving Draft...'}
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                {form.watch('published') ? 'Publish Post' : 'Save as Draft'}
+              </>
+            )}
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }

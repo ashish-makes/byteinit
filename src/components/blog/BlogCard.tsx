@@ -71,7 +71,7 @@ export default function BlogCard({ post }: BlogCardProps) {
   }
 
   return (
-    <Card className="w-full hover:bg-accent/5 transition-colors duration-200 shadow-none border-[0.5px] mb-2">
+    <Card className="w-full bg-white dark:bg-neutral-900 hover:bg-accent/10 transition-colors duration-200 shadow-none border border-neutral-200 dark:border-neutral-800 mb-2 overflow-hidden rounded-lg">
       <div className="flex items-start p-4 gap-4">
         <BlogPostActions.Vote 
           post={post} 
@@ -156,8 +156,10 @@ export default function BlogCard({ post }: BlogCardProps) {
             </div>
           </div>
 
-          {/* Add BlogReactions component without counts */}
-          <BlogReactions slug={post.slug} variant="stacked" className="mt-2" />
+          {/* Emoji Reactions with counts */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-3 mb-1">
+            <BlogReactions slug={post.slug} variant="regular" className="w-full" showPickerButton={true} />
+          </div>
 
           <div className="flex items-center justify-between pt-2">
             <div className="flex flex-wrap gap-1 max-w-[85%]">
