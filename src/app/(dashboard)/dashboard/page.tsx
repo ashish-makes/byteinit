@@ -221,8 +221,8 @@ const QuickAction = ({ icon: Icon, label, description, href, color }: QuickActio
       "hover:translate-y-[-2px] transition-all duration-300",
       "after:absolute after:inset-0 after:rounded-xl",
       "after:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)]",
-      "dark:bg-card/40 dark:after:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]",
-      "dark:hover:bg-card/60"
+      "dark:bg-zinc-900 dark:after:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]",
+      "dark:hover:bg-zinc-800"
     )}
   >
     <div className="flex items-start justify-between mb-8">
@@ -282,7 +282,7 @@ const MetricCard = ({ icon: Icon, label, value, trend, loading, color }: MetricC
   <div className={cn(
     "relative rounded-xl bg-white p-5",
     "shadow-[0_4px_24px_-8px_rgba(0,0,0,0.03)]",
-    "dark:bg-card/40 dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]"
+    "dark:bg-zinc-900 dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)]"
   )}>
     <div className="flex gap-4">
       <div 
@@ -889,7 +889,7 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-8 pb-8 bg-[#f9fafb] dark:bg-background min-h-screen px-4 sm:px-6 -mt-14 pt-14"
+        className="space-y-8 pb-8 bg-[#f9fafb] dark:bg-zinc-950 min-h-screen px-4 sm:px-6 -mt-14 pt-14"
       >
         {/* Header Section */}
         <div className="flex flex-col gap-6 pt-6">
@@ -1162,7 +1162,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-white dark:bg-card/40">
+          <div className="rounded-xl bg-white dark:bg-zinc-900">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-0">

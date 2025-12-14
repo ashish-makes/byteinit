@@ -238,7 +238,7 @@ Guidelines:
 Return as JSON with only bio and tagline fields.`
         }
       ],
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-versatile",
       temperature: 0.6,
       response_format: { type: "json_object" }
     });
