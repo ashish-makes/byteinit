@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/ashish-makes/byteinit/main/public/logo.png" alt="Byteinit Logo" width="80" />
-
 # Byteinit
 
 ### A full-stack developer community platform for sharing knowledge, resources, and articles
