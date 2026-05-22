@@ -188,16 +188,20 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    });
+    let generatedBio = userDetails.bio || "";
+    let generatedTagline = "";
 
-    // Generate a professional bio with a developer focus
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: `You are a professional bio writer specializing in developer profiles. Create concise, impactful bios that:
+    if (process.env.GROQ_API_KEY) {
+      try {
+        const groq = new Groq({
+          apiKey: process.env.GROQ_API_KEY,
+        });
+
+        const completion = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content: `You are a professional bio writer specializing in developer profiles. Create concise, impactful bios that:
 - Highlight technical expertise and achievements
 - Maintain a professional tone while showing personality
 - Focus on value proposition and impact
@@ -210,10 +214,10 @@ Return ONLY a JSON object with exactly these fields:
   "bio": "professional bio text",
   "tagline": "professional tagline"
 }`
-        },
-        {
-          role: "user",
-          content: `Create a professional bio and tagline for this developer profile. Focus on their technical expertise and unique value proposition:
+            },
+            {
+              role: "user",
+              content: `Create a professional bio and tagline for this developer profile. Focus on their technical expertise and unique value proposition:
 
 ${JSON.stringify({
   name: userDetails.name,
@@ -236,19 +240,23 @@ Guidelines:
 - Incorporate tech stack naturally
 
 Return as JSON with only bio and tagline fields.`
+            }
+          ],
+          model: "llama-3.3-70b-versatile",
+          temperature: 0.6,
+          response_format: { type: "json_object" }
+        });
+
+        const content = completion.choices[0].message.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          generatedBio = parsed.bio || generatedBio;
+          generatedTagline = parsed.tagline || "";
         }
-      ],
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.6,
-      response_format: { type: "json_object" }
-    });
-
-    const content = completion.choices[0].message.content;
-    if (!content) {
-      throw new Error("No content generated from AI");
+      } catch (aiError) {
+        console.error("AI generation failed, falling back to existing bio:", aiError);
+      }
     }
-
-    const generatedData = JSON.parse(content);
 
     // Merge core user details with the generated narrative while preserving certain values
     const enhancedProfile = {
@@ -257,8 +265,8 @@ Return as JSON with only bio and tagline fields.`
       name: userDetails.name,
       email: userDetails.email,
       image: userDetails.image,
-      bio: generatedData.bio || userDetails.bio || "",
-      tagline: generatedData.tagline || "",
+      bio: generatedBio,
+      tagline: generatedTagline,
       github: userDetails.github,
       website: userDetails.website
         ? userDetails.website.startsWith("http")
